@@ -1,4 +1,17 @@
-<program> ::= <ws> ( <global-declaration> <ws> )*
+// bnf style used:
+// comments: // comment
+// terminal: "terminal"
+// escaped characters: "\n\r\t\\"
+// items: <item-name>
+// rule: <item> ::= <other-item>
+// grouping: ( <item> )
+// optional: <item>?
+// multiple: <item>+
+// any number: <item>*
+// alternatives: <item> | <item>
+// starting node is <module>:
+
+<module> ::= <ws> ( <global-declaration> <ws> )*
 
 <global-declaration> ::= <comment>
                        | <module-declaration>
@@ -9,7 +22,7 @@
 
 <comment> ::= "#" <non-newline-char>* <newline-char>
 
-<module-declaration> ::= "module" <fws> <module-name> <ws> "{" <ws> ( <global-declaration> <ws> )* "}"
+<module-declaration> ::= "module" <fws> <module-name> <ws> "{" <module> "}"
 
 <module-name> ::= <identifier-path>
 
@@ -208,11 +221,14 @@
 
 <visibility-specifier> ::= ("public" <fws>)?
 
-<variable-declaration> ::= <mutability-specifier>? <variable-name> <fws>
+<variable-declaration> ::= <mutability-specifier> <variable-name> <fws>
                            ":" <ws> <type-reference> <fws>
-                           "=" <ws> <expression>
+                           "=" <ws> <variable-declaration-rhs>
 
-<mutability-specifier> ::= "mut" <fws>
+<variable-declaration-rhs> ::= "undefined"
+                             | <expression>
+
+<mutability-specifier> ::= ("mut" <fws>)?
 
 <variable-reference> ::= <global-identifier-path>
                        | <variable-name> ( "." <variable-name> )*
@@ -223,7 +239,10 @@
 
 <type-name> ::= <identifier>
 
-<type-reference> ::= <global-identifier-path>
+<type-reference> ::= <prefix-type-reference>
+
+<prefix-type-reference> ::= <global-identifier-path>
+                          | "&" <ws> <prefix-type-reference>
 
 
 
