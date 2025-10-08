@@ -117,3 +117,16 @@ where
             .map(|(node, _)| node))
     }
 }
+
+impl <'a> Parsable<'a> for () {
+    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        Some(())
+    }
+}
+
+pub fn parse_literal<'a>(stream: &mut ScopedStream<'a>, literal: &'static [u8]) -> Option<()> {
+    stream.scope(|stream| {
+        stream.read(literal.len(), |slice| slice == literal)
+            .map(|_| ())
+    }).map(|_| ())
+}
