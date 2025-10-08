@@ -31,3 +31,14 @@ where
             .map(|(node, _)| Box::new(node))
     }
 }
+
+impl<'a, T> Parsable<'a> for Option<T>
+where 
+    T: for<'b> Parsable<'b>
+{
+    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        Some(stream
+            .scope(|stream| T::parse(stream))
+            .map(|(node, _)| node))
+    }
+}
