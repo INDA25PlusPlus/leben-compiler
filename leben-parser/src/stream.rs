@@ -10,6 +10,10 @@ impl<'a> ScopedStream<'a> {
         ScopedStream { buffer, index: 0 }
     }
 
+    pub fn at_end(&self) -> bool {
+        self.index == self.buffer.len()
+    }
+
     pub fn read<'c>(
         &'c mut self,
         len: usize,

@@ -99,6 +99,15 @@ impl<'a, const START: u8, const END: u8> Parsable<'a> for CharRange<START, END> 
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EndOfStream;
+
+impl<'a> Parsable<'a> for EndOfStream {
+    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        stream.at_end().then_some(EndOfStream)
+    }
+}
+
 impl<'a, T> Parsable<'a> for Box<T>
 where
     T: for<'b> Parsable<'b>
