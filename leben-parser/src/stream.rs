@@ -10,17 +10,17 @@ impl<'a> ScopedStream<'a> {
         ScopedStream { buffer, index: 0 }
     }
 
-    pub fn read(
-        &'a mut self, 
+    pub fn read<'c>(
+        &'c mut self,
         len: usize,
-        read_fn: impl FnOnce(&'a [u8]) -> bool)
-        -> Option<&'a [u8]> 
+        pred: impl FnOnce(&'c [u8]) -> bool)
+        -> Option<&'c [u8]> 
     {
         if self.buffer.len() + self.index < len { return None; }
 
         let requested_slice = &self.buffer[self.index..(self.index + len)];
 
-        read_fn(requested_slice).then_some({
+        pred(requested_slice).then_some({
             self.index += len;
             requested_slice
         })
