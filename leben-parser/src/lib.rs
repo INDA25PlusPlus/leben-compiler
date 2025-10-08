@@ -1,8 +1,8 @@
-mod stream;
-mod parser;
+pub mod stream;
+pub mod parser;
 
 struct Char {
-    
+
 }
 
 pub fn add(left: u64, right: u64) -> u64 {
