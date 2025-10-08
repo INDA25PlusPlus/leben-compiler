@@ -20,3 +20,14 @@ where
             .map(|(node, span)| WithSpan { node, span })
     }
 }
+
+impl<'a, T> Parsable<'a> for Box<T>
+where
+    T: for<'b> Parsable<'b>
+{
+    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        stream
+            .scope(|stream| T::parse(stream))
+            .map(|(node, _)| Box::new(node))
+    }
+}
