@@ -4,9 +4,10 @@ pub trait Parsable<'a>: Sized {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self>;
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WithSpan<'a, T: Parsable<'a>> {
-    node: T,
-    span: &'a [u8],
+    pub node: T,
+    pub span: &'a [u8],
 }
 
 impl<'a, T> Parsable<'a> for WithSpan<'a, T>
@@ -16,16 +17,17 @@ where
     fn parse(stream: &mut ScopedStream<'a>) -> Option<WithSpan<'a, T>>
     {
         stream
-            .scope(|stream| T::parse(stream))
+            .scope_with_span(|stream| T::parse(stream))
             .map(|(node, span)| WithSpan { node, span })
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Repeat<T, const MIN: usize>
 where
     T: for<'a> Parsable<'a>
 {
-    nodes: Vec<T>,
+    pub nodes: Vec<T>,
 }
 
 impl<'a, T, const MIN: usize> Parsable<'a> for Repeat<T, MIN>
@@ -36,7 +38,6 @@ where
         let mut nodes = Vec::new();
         while let Some(node) = stream
             .scope(|stream| T::parse(stream))
-            .map(|(node, _)| node)
         {
             nodes.push(node);
         }
@@ -48,11 +49,12 @@ pub type ZeroPlus<T> = Repeat<T, 0>;
 
 pub type OnePlus<T> = Repeat<T, 1>;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RepeatLimited<T, const MIN: usize, const MAX: usize>
 where
     T: for<'a> Parsable<'a>
 {
-    nodes: [Option<T>; MAX],
+    pub nodes: [Option<T>; MAX],
 }
 
 impl<'a, T, const MIN: usize, const MAX: usize> Parsable<'a> for RepeatLimited<T, MIN, MAX>
@@ -63,8 +65,7 @@ where
         let mut nodes = [const { None }; MAX];
         for i in 0..MAX {
             let node = stream
-                .scope(|stream| T::parse(stream))
-                .map(|(node, _)| node);
+                .scope(|stream| T::parse(stream));
             if matches!(node, None) {
                 return (i >= MIN).then_some(RepeatLimited { nodes });
             }
@@ -74,6 +75,7 @@ where
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CharLiteral<const CHAR: u8>;
 
 impl<'a, const CHAR: u8> Parsable<'a> for CharLiteral<CHAR> {
@@ -81,10 +83,11 @@ impl<'a, const CHAR: u8> Parsable<'a> for CharLiteral<CHAR> {
         stream.scope(|stream| {
             stream.read(1, |slice| slice[0] == CHAR)
                 .map(|_| CharLiteral)
-        }).map(|(ch, _)| ch)
+        })
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CharRange<const START: u8, const END: u8>;
 
 impl<'a, const START: u8, const END: u8> Parsable<'a> for CharRange<START, END> {
@@ -92,7 +95,7 @@ impl<'a, const START: u8, const END: u8> Parsable<'a> for CharRange<START, END> 
         stream.scope(|stream| {
             stream.read(1, |slice| (START..=END).contains(&slice[0]))
                 .map(|_| CharRange)
-        }).map(|(ch, _)| ch)
+        })
     }
 }
 
@@ -103,7 +106,7 @@ where
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
         stream
             .scope(|stream| T::parse(stream))
-            .map(|(node, _)| Box::new(node))
+            .map(|node| Box::new(node))
     }
 }
 
@@ -113,13 +116,12 @@ where
 {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
         Some(stream
-            .scope(|stream| T::parse(stream))
-            .map(|(node, _)| node))
+            .scope(|stream| T::parse(stream)))
     }
 }
 
 impl <'a> Parsable<'a> for () {
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+    fn parse(_: &mut ScopedStream<'a>) -> Option<Self> {
         Some(())
     }
 }
@@ -128,5 +130,5 @@ pub fn parse_literal<'a>(stream: &mut ScopedStream<'a>, literal: &'static [u8]) 
     stream.scope(|stream| {
         stream.read(literal.len(), |slice| slice == literal)
             .map(|_| ())
-    }).map(|_| ())
+    })
 }

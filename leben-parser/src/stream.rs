@@ -16,7 +16,7 @@ impl<'a> ScopedStream<'a> {
         pred: impl FnOnce(&'c [u8]) -> bool)
         -> Option<&'c [u8]> 
     {
-        if self.buffer.len() + self.index < len { return None; }
+        if self.buffer.len() < len + self.index { return None; }
 
         let requested_slice = &self.buffer[self.index..(self.index + len)];
 
@@ -27,6 +27,21 @@ impl<'a> ScopedStream<'a> {
     }
 
     pub fn scope<T: Parsable<'a>>(
+        &mut self, 
+        parse_fn: impl for<'b> FnOnce(&'b mut ScopedStream) -> Option<T>) 
+        -> Option<T>
+    {
+        let start_index = self.index;
+
+        let result = parse_fn(self);
+
+        if matches!(result, None) {
+            self.index = start_index;
+        }
+        result
+    }
+
+    pub fn scope_with_span<T: Parsable<'a>>(
         &mut self, 
         parse_fn: impl for<'b> FnOnce(&'b mut ScopedStream) -> Option<T>) 
         -> Option<(T, &'a [u8])>
