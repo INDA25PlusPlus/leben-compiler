@@ -169,6 +169,7 @@
 
 <postfix-expression> ::= <inner-expression>
                        | <postfix-expression> <ws> "[" <ws> <expression> "]"
+                       | <postfix-expression> <ws> "(" <ws> <function-argument-list>? ")"
                        | <postfix-expression> "." <identifier-path>
 
 
@@ -176,7 +177,6 @@
 <inner-expression> ::= <enclosed-expression>
                      | <struct-initialization-expression>
                      | <builtin-function-call-expression>
-                     | <function-call-expression>
                      | <literal-int-expression>
                      | <literal-float-expression>
                      | <literal-string-expression>
@@ -193,13 +193,11 @@
 
 
 
-<builtin-function-call-expression> ::= "@" <function-call-expression>
-
-<function-call-expression> ::= <function-reference> <ws> "(" <ws> <function-argument-list>? ")"
-
-<function-argument-list> ::= ( <function-argument> <ws> "," )* <function-argument> (<ws> "," )? <ws>
+<builtin-function-call-expression> ::= "@" <function-reference> <ws> "(" <ws> <function-argument-list>? ")"
 
 <function-reference> ::= <variable-reference>
+
+<function-argument-list> ::= ( <function-argument> <ws> "," )* <function-argument> (<ws> "," )? <ws>
 
 <function-argument> ::= <expression>
 
