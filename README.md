@@ -1,5 +1,9 @@
 # leben-compiler
 
+## Grammar
+
+The language's grammar in BNF format can be found in `./grammar.txt`
+
 ## Usage
 
 ### Parsing
