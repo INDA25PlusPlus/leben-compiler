@@ -137,6 +137,8 @@ where T:
     }
 }
 
+pub type Span<T> = WithSpan<Ignore<T>>;
+
 impl<'a, T> Parsable<'a> for Box<T>
 where
     T: for<'b> Parsable<'b>
