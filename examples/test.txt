@@ -1,0 +1,7 @@
+function test(a: int) {
+    return;
+}
+
+struct Number {
+    x: int
+}
