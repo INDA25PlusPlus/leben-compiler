@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "leben-parser"
+name = "leben-parsable"
 version = "0.1.0"
