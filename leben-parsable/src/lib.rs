@@ -7,8 +7,23 @@ pub use leben_parsable_derive::Parsable;
 
 #[cfg(test)]
 mod parse_tests {
-    use crate::{parser::{parse_literal, CharLiteral, Parsable, Repeat, ZeroPlus}, stream::ScopedStream};
+    use crate::{parser::{parse_literal, CharLiteral, Parsable, Repeat, ZeroPlus}, stream::ScopedStream, Unparsable};
     use std::fmt::Debug;
+
+    enum Variants {
+        V1(CharLiteral<b'1'>),
+        V2(CharLiteral<b'2'>),
+    }
+
+    impl<'p> Parsable<'p> for Variants {
+        fn parse(stream: &mut ScopedStream<'p>) -> Option<Self> {
+            stream.scope(|stream| {
+                None
+                    .or(<CharLiteral<b'1'> as Parsable>::parse(stream).map(|v| Variants::V1(v)))
+                    .or(<CharLiteral<b'2'> as Parsable>::parse(stream).map(|v| Variants::V2(v)))
+            })
+        }
+    }
 
     #[derive(Debug, PartialEq, Eq)]
     struct Compound<A, B> {
@@ -23,9 +38,9 @@ mod parse_tests {
     {
         fn parse(stream: &mut ScopedStream<'p>) -> Option<Self> {
             stream.scope(|stream| {
-                Some(Compound {
-                    a: A::parse(stream)?,
-                    b: B::parse(stream)?,
+                Some(Self {
+                    a: <A as Parsable<'_>>::parse(stream)?,
+                    b: <B as Parsable<'_>>::parse(stream)?,
                 })
             })
         }

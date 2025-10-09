@@ -75,9 +75,9 @@ fn named_struct_derive(struct_name: syn::Ident, fields: syn::FieldsNamed) -> Tok
     
     quote! {
         impl<'a> leben_parsable::Parsable<'a> for #struct_name {
-            fn parse(stream: &mut leben_parsable::ScopedStream<'a>) -> Option<Self> {
+            fn parse(stream: &mut leben_parsable::ScopedStream<'a>) -> std::option::Option<Self> {
                 stream.scope(|stream| {
-                    Some(Self {
+                    std::option::Option::Some(Self {
                         #( #fields ),*
                     })
                 })
@@ -111,6 +111,49 @@ fn is_unit_type(ty: &syn::Type) -> bool {
     }
 }
 
-fn enum_derive(name: syn::Ident, data_enum: syn::DataEnum) -> TokenStream {
-    todo!()
+fn enum_derive(enum_name: syn::Ident, data_enum: syn::DataEnum) -> TokenStream {
+    for variant in data_enum.variants.iter() {
+        if matches!(get_literal_attribute(&variant.attrs), Some(..)) {
+            return quote! {
+                compile_error!("Unxpected `literal` attribute")
+            }.into();
+        }
+        if let syn::Fields::Unnamed(fields) = &variant.fields {
+            if fields.unnamed.len() != 1 {
+                return quote! {
+                    compile_error!("`Parsable` can only be derived for enums with variants with one unnamed field")
+                }.into();
+            }
+        } else {
+            return quote! {
+                compile_error!("`Parsable` can only be derived for enums with variants with one unnamed field")
+            }.into();
+        }
+    }
+
+    let variants = data_enum.variants.iter().map(|variant| {
+        let name = &variant.ident;
+        let field = match variant.fields.iter().next() {
+            Some(field) => field,
+            None => return quote! {
+                compile_error!("`Parsable` can only be derived for enums with variants with one unnamed field")
+            },
+        };
+        let ty = &field.ty;
+
+        quote! {
+            <#ty as leben_parsable::Parsable>::parse(stream).map(|v| #enum_name::#name(v))
+        }
+    });
+
+    quote! {
+        impl<'p> leben_parsable::Parsable<'p> for #enum_name {
+            fn parse(stream: &mut leben_parsable::ScopedStream<'p>) -> std::option::Option<Self> {
+                stream.scope(|stream| {
+                    std::option::Option::None
+                        #( .or( #variants) )*
+                })
+            }
+        }
+    }.into()
 }

@@ -20,17 +20,53 @@ mod derive_tests {
         s2: Ignore<Option<Space>>,
         #[literal = b"wow"]
         expr: (),
+    }
+
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Parsable, Deserialize, Serialize)]
+    struct ReturnKeyword { #[literal = b"return"] s1: () }
+
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Parsable, Deserialize, Serialize)]
+    struct IfKeyword { #[literal = b"if"] s1: () }
+
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Parsable, Deserialize, Serialize)]
+    struct ElseKeyword { #[literal = b"else"] s1: () }
+
+    #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
+    enum Keyword {
+        Return(ReturnKeyword),
+        If(IfKeyword),
+        Else(ElseKeyword),
+    }
+
+    #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
+    struct Combined {
+        var: VariableDeclaration,
+        _0: CharLiteral<b';'>,
+        _1: OnePlus<Space>,
+        keyword: Keyword,
         end: EndOfStream,
     }
 
     #[test]
-    fn test_derive() {
+    fn struct_derive() {
         assert_eq!(
             Some(VariableDeclaration::default()),
             VariableDeclaration::parse(&mut ScopedStream::new(b"test =wow"))
         );
 
         let parsed = VariableDeclaration::parse(&mut ScopedStream::new(b"test =wow"));
+
+        println!("{}", ron::ser::to_string_pretty(&parsed.unwrap(), ron::ser::PrettyConfig::default()).unwrap());
+    }
+
+    #[test]
+    fn enum_derive() {
+        assert_eq!(
+            Some(Keyword::If(IfKeyword { s1: () })),
+            Keyword::parse(&mut ScopedStream::new(b"if"))
+        );
+
+        let parsed = Combined::parse(&mut ScopedStream::new(b"test =wow; return"));
 
         println!("{}", ron::ser::to_string_pretty(&parsed.unwrap(), ron::ser::PrettyConfig::default()).unwrap());
     }
