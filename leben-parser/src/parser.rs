@@ -1,28 +1,34 @@
+use std::marker::PhantomData;
+use serde::{Deserialize, Serialize};
+
 use crate::stream::ScopedStream;
 
 pub trait Parsable<'a>: Sized {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self>;
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WithSpan<'a, T: Parsable<'a>> {
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub struct WithSpan<T>
+where
+    T: for<'a> Parsable<'a>
+{
     pub node: T,
-    pub span: &'a [u8],
+    pub span: Vec<u8>,
 }
 
-impl<'a, T> Parsable<'a> for WithSpan<'a, T>
+impl<'a, T> Parsable<'a> for WithSpan<T>
 where
     T: for<'b> Parsable<'b>
 {
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<WithSpan<'a, T>>
+    fn parse(stream: &mut ScopedStream<'a>) -> Option<WithSpan<T>>
     {
         stream
             .scope_with_span(|stream| T::parse(stream))
-            .map(|(node, span)| WithSpan { node, span })
+            .map(|(node, span)| WithSpan { node, span: span.to_owned() })
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Repeat<T, const MIN: usize>
 where
     T: for<'a> Parsable<'a>
@@ -49,12 +55,12 @@ pub type ZeroPlus<T> = Repeat<T, 0>;
 
 pub type OnePlus<T> = Repeat<T, 1>;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct RepeatLimited<T, const MIN: usize, const MAX: usize>
 where
     T: for<'a> Parsable<'a>
 {
-    pub nodes: [Option<T>; MAX],
+    pub nodes: Vec<T>,
 }
 
 impl<'a, T, const MIN: usize, const MAX: usize> Parsable<'a> for RepeatLimited<T, MIN, MAX>
@@ -62,20 +68,23 @@ where
     T: for<'b> Parsable<'b>
 {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        let mut nodes = [const { None }; MAX];
+        let mut nodes = Vec::with_capacity(MAX);
         for i in 0..MAX {
             let node = stream
                 .scope(|stream| T::parse(stream));
-            if matches!(node, None) {
+
+            if let Some(node) = node {
+                nodes.push(node);
+            } else {
                 return (i >= MIN).then_some(RepeatLimited { nodes });
             }
-            nodes[i] = node;
+            
         }
         Some(RepeatLimited { nodes })
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct CharLiteral<const CHAR: u8>;
 
 impl<'a, const CHAR: u8> Parsable<'a> for CharLiteral<CHAR> {
@@ -87,7 +96,7 @@ impl<'a, const CHAR: u8> Parsable<'a> for CharLiteral<CHAR> {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct CharRange<const START: u8, const END: u8>;
 
 impl<'a, const START: u8, const END: u8> Parsable<'a> for CharRange<START, END> {
@@ -99,12 +108,32 @@ impl<'a, const START: u8, const END: u8> Parsable<'a> for CharRange<START, END> 
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct EndOfStream;
 
 impl<'a> Parsable<'a> for EndOfStream {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
         stream.at_end().then_some(EndOfStream)
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub struct Ignore<T>
+where T: 
+    for<'a> Parsable<'a> 
+{
+    #[serde(skip_serializing)]
+    phantom_data: PhantomData<T>,
+}
+
+impl<'a, T> Parsable<'a> for Ignore<T>
+where T:
+    for<'b> Parsable<'b>
+{
+    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        stream
+            .scope(|stream| T::parse(stream))
+            .map(|_| Ignore { phantom_data: PhantomData })
     }
 }
 
