@@ -157,6 +157,30 @@ impl<'a> Parsable<'a> for EndOfStream {
     }
 }
 
+#[derive(Clone, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct WithEnd<T>
+where
+    T: for<'a> Parsable<'a>
+{
+    pub node: T
+}
+
+impl<'a, T> Parsable<'a> for WithEnd<T>
+where
+    T: for<'b> Parsable<'b>
+{
+    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        let res = stream
+            .scope(|stream| T::parse(stream))
+            .map(|node| WithEnd { node });
+        if !stream.at_end() { return None };
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG WITH END  < {}\n{:?}", std::any::type_name::<T>(), &res);
+        }
+        res
+    }
+}
+
 #[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Ignore<T>
 where T: 
