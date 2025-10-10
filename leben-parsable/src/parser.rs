@@ -182,6 +182,52 @@ where
 }
 
 #[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub struct Intersperse<T, S>
+where
+    T: for<'a> Parsable<'a>,
+    S: for<'b> Parsable<'b>,
+{
+    pub nodes: Vec<T>,
+    #[serde(skip_serializing)]
+    phantom_data: PhantomData<S>,
+}
+
+impl<'a, T, S> Parsable<'a> for Intersperse<T, S>
+where
+    T: for<'t> Parsable<'t>,
+    S: for<'s> Parsable<'s>,
+{
+    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG INTER >>>>> {}", std::any::type_name::<T>());
+        }
+        let mut nodes = Vec::new();
+        while let Some(node) = stream
+            .scope(|stream| T::parse(stream))
+        {
+            let sep = stream.scope(|stream| S::parse(stream));
+            if matches!(sep, None) { break; }
+            nodes.push(node);
+        }
+        let res = Some(Intersperse { nodes, phantom_data: PhantomData });
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG INTER <<<<< {}\n{:?}", std::any::type_name::<T>(), &res);
+        }
+        res
+    }
+}
+
+impl<T, S> Debug for Intersperse<T, S>
+where
+    T: for<'t> Parsable<'t> + Debug,
+    S: for<'s> Parsable<'s>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Intersperse").field("nodes", &self.nodes).finish()
+    }
+}
+
+#[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Ignore<T>
 where T: 
     for<'a> Parsable<'a> 
