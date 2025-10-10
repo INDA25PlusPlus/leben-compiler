@@ -72,15 +72,26 @@ fn named_struct_derive(struct_name: syn::Ident, fields: syn::FieldsNamed) -> Tok
             }
         }
     );
+
+    #[allow(unused_variables)]
+    let struct_debug_name = &struct_name.to_string();
     
     quote! {
         impl<'a> leben_parsable::Parsable<'a> for #struct_name {
             fn parse(stream: &mut leben_parsable::ScopedStream<'a>) -> std::option::Option<Self> {
-                stream.scope(|stream| {
+                #![allow(unexpected_cfgs)]
+                #[cfg(leben_parsable_derive_debug)] {
+                    println!("DEBUG STRUCT >>>> {}", #struct_debug_name);
+                }
+                let res = stream.scope(|stream| {
                     std::option::Option::Some(Self {
                         #( #fields ),*
                     })
-                })
+                });
+                #[cfg(leben_parsable_derive_debug)] {
+                    println!("DEBUG STRUCT <<<< {}\n{:?}", #struct_debug_name, &res);
+                }
+                res
             }
         }
     }.into()
@@ -146,13 +157,24 @@ fn enum_derive(enum_name: syn::Ident, data_enum: syn::DataEnum) -> TokenStream {
         }
     });
 
+    #[allow(unused_variables)]
+    let enum_debug_name = &enum_name.to_string();
+
     quote! {
         impl<'p> leben_parsable::Parsable<'p> for #enum_name {
             fn parse(stream: &mut leben_parsable::ScopedStream<'p>) -> std::option::Option<Self> {
-                stream.scope(|stream| {
+                #![allow(unexpected_cfgs)]
+                #[cfg(leben_parsable_derive_debug)] {
+                    println!("DEBUG ENUM >>>>>> {}", #enum_debug_name);
+                }
+                let res = stream.scope(|stream| {
                     std::option::Option::None
-                        #( .or( #variants) )*
-                })
+                        #( .or_else(|| #variants) )*
+                });
+                #[cfg(leben_parsable_derive_debug)] {
+                    println!("DEBUG ENUM <<<<<< {}\n{:?}", #enum_debug_name, &res);
+                }
+                res
             }
         }
     }.into()

@@ -39,7 +39,11 @@ impl<'a> ScopedStream<'a> {
 
         let result = parse_fn(self);
 
-        if matches!(result, None) {
+        if matches!(result, Some(..)) {
+            #[cfg(feature = "leben_parsable_debug")] {
+                println!("DEBUG BUFFER:\n{}$EOS", String::from_utf8_lossy(&self.buffer[self.index..]));
+            }
+        } else {
             self.index = start_index;
         }
         result
@@ -55,6 +59,9 @@ impl<'a> ScopedStream<'a> {
         let result = parse_fn(self);
 
         if let Some(result) = result {
+            #[cfg(feature = "leben_parsable_debug")] {
+                println!("DEBUG BUFFER:\n{}$EOS", String::from_utf8_lossy(&self.buffer[self.index..]));
+            }
             Some((result, &self.buffer[start_index..self.index]))
         } else {
             self.index = start_index;

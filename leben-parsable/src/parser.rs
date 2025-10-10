@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::stream::ScopedStream;
@@ -7,7 +8,7 @@ pub trait Parsable<'a>: Sized {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self>;
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct WithSpan<T>
 where
     T: for<'a> Parsable<'a>
@@ -16,38 +17,62 @@ where
     pub span: Vec<u8>,
 }
 
+impl<T> Debug for WithSpan<T>
+where T: 
+    for<'a> Parsable<'a> + Debug
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WithSpan")
+            .field("node", &self.node)
+            .field("span", &String::from_utf8_lossy(&self.span))
+            .finish()
+    }
+}
+
 impl<'a, T> Parsable<'a> for WithSpan<T>
 where
-    T: for<'b> Parsable<'b>
+    T: for<'b> Parsable<'b> + Debug
 {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<WithSpan<T>>
     {
-        stream
+        let res = stream
             .scope_with_span(|stream| T::parse(stream))
-            .map(|(node, span)| WithSpan { node, span: span.to_owned() })
+            .map(|(node, span)| WithSpan { node, span: span.to_owned() });
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG SPAN        {:?}",
+                res.as_ref().map(|span| String::from_utf8_lossy(&span.span)));
+        }
+        res
     }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Repeat<T, const MIN: usize>
 where
-    T: for<'a> Parsable<'a>
+    T: for<'a> Parsable<'a> + Debug
 {
     pub nodes: Vec<T>,
 }
 
 impl<'a, T, const MIN: usize> Parsable<'a> for Repeat<T, MIN>
 where 
-    T: for<'b> Parsable<'b>
+    T: for<'b> Parsable<'b> + Debug
 {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG REPEAT >>>> {} * {}", std::any::type_name::<T>(), MIN);
+        }
         let mut nodes = Vec::new();
         while let Some(node) = stream
             .scope(|stream| T::parse(stream))
         {
             nodes.push(node);
         }
-        (nodes.len() >= MIN).then_some(Repeat { nodes })
+        let res = (nodes.len() >= MIN).then_some(Repeat { nodes });
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG REPEAT <<<< {} * {}\n{:?}", std::any::type_name::<T>(), MIN, &res);
+        }
+        res
     }
 }
 
@@ -65,9 +90,12 @@ where
 
 impl<'a, T, const MIN: usize, const MAX: usize> Parsable<'a> for RepeatLimited<T, MIN, MAX>
 where 
-    T: for<'b> Parsable<'b>
+    T: for<'b> Parsable<'b> + Debug
 {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG REPEATLIM > {} * ({}-{})", std::any::type_name::<T>(), MIN, MAX);
+        }
         let mut nodes = Vec::with_capacity(MAX);
         for i in 0..MAX {
             let node = stream
@@ -76,11 +104,18 @@ where
             if let Some(node) = node {
                 nodes.push(node);
             } else {
-                return (i >= MIN).then_some(RepeatLimited { nodes });
+                let res = (i >= MIN).then_some(RepeatLimited { nodes });
+                #[cfg(feature = "leben_parsable_debug")] {
+                    println!("DEBUG REPEATLIM < {} * ({}-{})\n{:?}", std::any::type_name::<T>(), MIN, MAX, &res);
+                }
+                return res;
             }
-            
         }
-        Some(RepeatLimited { nodes })
+        let res = Some(RepeatLimited { nodes });
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG REPEATLIM < {} * ({}-{})\n{:?}", std::any::type_name::<T>(), MIN, MAX, &res);
+        }
+        res
     }
 }
 
@@ -89,10 +124,11 @@ pub struct CharLiteral<const CHAR: u8>;
 
 impl<'a, const CHAR: u8> Parsable<'a> for CharLiteral<CHAR> {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        stream.scope(|stream| {
+        let res = stream.scope(|stream| {
             stream.read(1, |slice| slice[0] == CHAR)
                 .map(|_| CharLiteral)
-        })
+        });
+        res
     }
 }
 
@@ -113,17 +149,30 @@ pub struct EndOfStream;
 
 impl<'a> Parsable<'a> for EndOfStream {
     fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        stream.at_end().then_some(EndOfStream)
+        let res = stream.at_end().then_some(EndOfStream);
+        #[cfg(feature = "leben_parsable_debug")] {
+            println!("DEBUG END         {:?}", &res);
+        }
+        res
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Ignore<T>
 where T: 
     for<'a> Parsable<'a> 
 {
     #[serde(skip_serializing)]
     phantom_data: PhantomData<T>,
+}
+
+impl<T> Debug for Ignore<T>
+where T: 
+    for<'a> Parsable<'a> 
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Ignore").finish()
+    }
 }
 
 impl<'a, T> Parsable<'a> for Ignore<T>
@@ -167,8 +216,13 @@ impl <'a> Parsable<'a> for () {
 }
 
 pub fn parse_literal<'a>(stream: &mut ScopedStream<'a>, literal: &'static [u8]) -> Option<()> {
-    stream.scope(|stream| {
+    let res = stream.scope(|stream| {
         stream.read(literal.len(), |slice| slice == literal)
             .map(|_| ())
-    })
+    });
+    #[cfg(feature = "leben_parsable_debug")] {
+        let lit = String::from_utf8_lossy(literal);
+        println!("DEBUG LITERAL     {} {:?}", &lit, res.as_ref().map(|_| &lit));
+    }
+    res
 }
