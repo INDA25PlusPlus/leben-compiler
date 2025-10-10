@@ -209,7 +209,7 @@ where
     }
 }
 
-impl <'a> Parsable<'a> for () {
+impl<'a> Parsable<'a> for () {
     fn parse(_: &mut ScopedStream<'a>) -> Option<Self> {
         Some(())
     }
@@ -225,4 +225,23 @@ pub fn parse_literal<'a>(stream: &mut ScopedStream<'a>, literal: &'static [u8]) 
         println!("DEBUG LITERAL     {} {:?}", &lit, res.as_ref().map(|_| &lit));
     }
     res
+}
+
+#[macro_export]
+macro_rules! Literal {
+    { $( $vis:vis struct $name:ident = $lit:literal; )* } => {
+        $(
+            #[derive(Parsable, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
+            $vis struct $name {
+                #[literal = $lit] _0: (),
+            }
+
+            impl std::fmt::Debug for $name {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    f.debug_tuple(stringify!($name)).field(&stringify!($lit)).finish()
+                }
+            }
+        )*
+    }
+
 }

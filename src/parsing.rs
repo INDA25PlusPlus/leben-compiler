@@ -1,6 +1,70 @@
 use leben_parsable::*;
 use serde::{Deserialize, Serialize};
 
+Literal! {
+    pub(crate) struct CommentToken = b"#";
+    pub(crate) struct CommaToken = b",";
+    pub(crate) struct SemicolonToken = b";";
+    pub(crate) struct PeriodToken = b".";
+    pub(crate) struct ColonToken = b":";
+    pub(crate) struct OpeningParenToken = b"(";
+    pub(crate) struct ClosingParenToken = b")";
+    pub(crate) struct OpeningBracketToken = b"[";
+    pub(crate) struct ClosingBracketToken = b"]";
+    pub(crate) struct OpeningBraceToken = b"{";
+    pub(crate) struct ClosingBraceToken = b"}";
+    pub(crate) struct RefToken = b"&";
+    pub(crate) struct DerefToken = b"*";
+    pub(crate) struct SingleQuoteToken = b"'";
+    pub(crate) struct DoubleQuoteToken = b"\"";
+    pub(crate) struct PublicToken = b"public";
+    pub(crate) struct RootToken = b"root";
+    pub(crate) struct ModuleToken = b"module";
+    pub(crate) struct StaticToken = b"static";
+    pub(crate) struct StructToken = b"struct";
+    pub(crate) struct MethodToken = b"method";
+    pub(crate) struct ThisToken = b"this";
+    pub(crate) struct FunctionToken = b"function";
+    pub(crate) struct BuiltinFunctionCallPrefixToken = b"@";
+    pub(crate) struct IfToken = b"if";
+    pub(crate) struct ElseIfToken = b"else if";
+    pub(crate) struct ElseToken = b"else";
+    pub(crate) struct LoopToken = b"loop";
+    pub(crate) struct ReturnToken = b"return";
+    pub(crate) struct BreakToken = b"break";
+    pub(crate) struct LetToken = b"let";
+    pub(crate) struct MutableToken = b"mut";
+    pub(crate) struct UndefinedToken = b"undefined";
+    pub(crate) struct OrToken = b"or";
+    pub(crate) struct XorToken = b"xor";
+    pub(crate) struct AndToken = b"and";
+    pub(crate) struct EqCompToken = b"==";
+    pub(crate) struct NeqCompToken = b"!=";
+    pub(crate) struct LtToken = b"<";
+    pub(crate) struct GtToken = b">";
+    pub(crate) struct LteqToken = b"<=";
+    pub(crate) struct GteqToken = b">=";
+    pub(crate) struct AddToken = b"+";
+    pub(crate) struct SubToken = b"-";
+    pub(crate) struct MultToken = b"*";
+    pub(crate) struct DivToken = b"/";
+    pub(crate) struct MinusToken = b"-";
+    pub(crate) struct InvertToken = b"~";
+    pub(crate) struct NotToken = b"!";
+    pub(crate) struct EqToken = b"=";
+    pub(crate) struct OrEqToken = b"or=";
+    pub(crate) struct XorEqToken = b"xor=";
+    pub(crate) struct AndEqToken = b"and=";
+    pub(crate) struct AddEqToken = b"+=";
+    pub(crate) struct SubEqToken = b"-=";
+    pub(crate) struct MultEqToken = b"*=";
+    pub(crate) struct DivEqToken = b"/=";
+    pub(crate) struct BinaryPrefixToken = b"0b";
+    pub(crate) struct HexadecimalPrefixToken = b"0x";
+    pub(crate) struct FloatScientificPrefixToken = b"0.1";
+    pub(crate) struct ScientificExponentToken = b"E";
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct SourceFile {
     pub module: Module,
@@ -23,7 +87,7 @@ pub(crate) struct ModulePart {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum GlobalDeclaration {
-    Comment(Comment),
+    Comment(Ignore<Comment>),
     ModuleDeclaration(ModuleDeclaration),
     StaticDeclaration(StaticDeclaration),
     MethodDeclaration(MethodDeclaration),
@@ -35,7 +99,7 @@ pub(crate) enum GlobalDeclaration {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct Comment {
-    _0: CharLiteral<b'#'>,
+    _0: CommentToken,
     pub comment: Span<ZeroPlus<NonNewlineChar>>,
     _2: NewlineChar,
 }
@@ -44,13 +108,13 @@ pub(crate) struct Comment {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ModuleDeclaration {
-    #[literal = b"module"] _0: (),
+    _0: ModuleToken,
     _1: Fws,
     pub module_name: ModuleName,
     _2: Ws,
-    _3: CharLiteral<b'{'>,
+    _3: OpeningBraceToken,
     pub module: Module,
-    _4: CharLiteral<b'}'>,
+    _4: ClosingBraceToken,
 }
 
 type ModuleName = IdentifierPath;
@@ -60,11 +124,11 @@ type ModuleName = IdentifierPath;
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct StaticDeclaration {
     pub visibility: VisibilitySpecifier,
-    #[literal = b"static"] _0: (),
+    _0: StaticToken,
     _1: Fws,
     pub declaration: VariableDeclaration,
     _2: Ws,
-    _3: CharLiteral<b';'>,
+    _3: SemicolonToken,
 }
 
 
@@ -72,14 +136,14 @@ pub(crate) struct StaticDeclaration {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MethodDeclaration {
     pub visibility: VisibilitySpecifier,
-    #[literal = b"method"] _0: (),
+    _0: MethodToken,
     _1: Fws,
     pub function_name: MethodName,
     _2: Fws,
-    _3: CharLiteral<b'('>,
+    _3: OpeningParenToken,
     _4: Ws,
     pub members: Option<MethodParameterList>,
-    _5: CharLiteral<b')'>,
+    _5: ClosingParenToken,
     _6: Ws,
     pub return_type_and_body: FunctionReturnTypeAndBody,
 }
@@ -88,14 +152,14 @@ pub(crate) struct MethodDeclaration {
 pub(crate) struct MethodName {
     pub type_name: TypeName,
     _0: Ws,
-    _1: CharLiteral<b'.'>,
+    _1: PeriodToken,
     _2: Ws,
     pub function_name: FunctionName,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MethodParameterList {
-    #[literal = b"this"] _0: (),
+    _0: ThisToken,
     _1: Ws,
     pub parameters: ZeroPlus<MethodParameterListPart>,
     _2: Option<CommaWs>,
@@ -103,7 +167,7 @@ pub(crate) struct MethodParameterList {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MethodParameterListPart {
-    _0: CharLiteral<b','>,
+    _0: CommaToken,
     _1: Ws,
     pub parameter: FunctionParameter,
     _2: Ws,
@@ -111,7 +175,7 @@ pub(crate) struct MethodParameterListPart {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct CommaWs {
-    _0: CharLiteral<b','>,
+    _0: CommaToken,
     _1: Ws,
 }
 
@@ -120,14 +184,14 @@ pub(crate) struct CommaWs {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct FunctionDeclaration {
     pub visibility: VisibilitySpecifier,
-    #[literal = b"function"] _0: (),
+    _0: FunctionToken,
     _1: Fws,
     pub function_name: FunctionName,
     _2: Ws,
-    _3: CharLiteral<b'('>,
+    _3: OpeningParenToken,
     _4: Ws,
     pub members: Option<FunctionParameterList>,
-    _5: CharLiteral<b')'>,
+    _5: ClosingParenToken,
     _6: Ws,
     pub return_type_and_body: FunctionReturnTypeAndBody,
 }
@@ -151,7 +215,7 @@ pub(crate) struct FunctionParameterListPart {
 pub(crate) struct FunctionParameter {
     pub name: FunctionParameterName,
     _0: Ws,
-    _1: CharLiteral<b':'>,
+    _1: ColonToken,
     _2: Ws,
     pub type_ref: TypeReference,
 }
@@ -168,7 +232,7 @@ pub(crate) struct FunctionReturnTypeAndBody {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct FunctionReturnType {
-    _0: CharLiteral<b':'>,
+    _0: ColonToken,
     _1: Ws,
     pub type_ref: TypeReference,
     _2: Fws,
@@ -179,14 +243,14 @@ pub(crate) struct FunctionReturnType {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct StructDeclaration {
     pub visibility: VisibilitySpecifier,
-    #[literal = b"struct"] _0: (),
+    _0: StructToken,
     _1: Fws,
     pub type_name: TypeName,
     _2: Fws,
-    _3: CharLiteral<b'{'>,
+    _3: OpeningBraceToken,
     _4: Ws,
     pub members: Option<StructMemberList>,
-    _5: CharLiteral<b'}'>,
+    _5: ClosingBraceToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -207,7 +271,7 @@ pub(crate) struct StructMemberListPart {
 pub(crate) struct StructMember {
     pub name: StructMemberName,
     _0: Ws,
-    _1: CharLiteral<b':'>,
+    _1: ColonToken,
     _2: Ws,
     pub type_ref: TypeReference,
 }
@@ -230,10 +294,10 @@ pub(crate) enum Statement {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct CompoundStatement {
-    _0: CharLiteral<b'{'>,
+    _0: OpeningBraceToken,
     _1: Ws,
     pub statements: ZeroPlus<CompoundStatementPart>,
-    _2: CharLiteral<b'}'>,
+    _2: ClosingBraceToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -246,7 +310,7 @@ pub(crate) struct CompoundStatementPart {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct IfStatement {
-    #[literal = b"if"] _0: (),
+    _0: IfToken,
     pub if_clause: IfClause,
     pub else_if_clauses: ZeroPlus<ElseIfClause>,
     pub else_clause: Option<ElseClause>,
@@ -263,31 +327,31 @@ pub(crate) struct IfClause {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ElseIfClause {
     _0: Fws,
-    #[literal = b"else if"] _1: (),
+    _1: ElseIfToken,
     pub if_clause: IfClause,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ElseClause {
     _0: Fws,
-    #[literal = b"else if"] _1: (),
+    _1: ElseToken,
     _2: Fws,
     pub block: CompoundStatement,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LoopStatement {
-    #[literal = b"loop"] _0: (),
+    _0: LoopToken,
     _1: Fws,
     pub block: CompoundStatement,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ReturnStatement {
-    #[literal = b"return"] _0: (),
+    _0: ReturnToken,
     pub expr: Option<ReturnStatementExpr>,
     _1: Ws,
-    _2: CharLiteral<b';'>,
+    _2: SemicolonToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -298,18 +362,18 @@ pub(crate) struct ReturnStatementExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct BreakStatement {
-    #[literal = b"break"] _0: (),
+    _0: BreakToken,
     _1: Ws,
-    _2: CharLiteral<b';'>,
+    _2: SemicolonToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct VariableDeclarationStatement {
-    #[literal = b"let"] _0: (),
+    _0: LetToken,
     _1: Fws,
     pub declaration: VariableDeclaration,
     _2: Ws,
-    _3: CharLiteral<b';'>,
+    _3: SemicolonToken,
 }
 
 
@@ -321,17 +385,19 @@ pub(crate) struct AssignmentStatement {
     pub op: AssignmentOperator,
     _1: Ws,
     pub rhs: Expr,
+    _2: Ws,
+    _3: SemicolonToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum PrefixAssigneeExpr {
-    Postfix(PostfixAssigneeExpr),
     Prefix(PrefixAssigneeExprInner),
+    Postfix(PostfixAssigneeExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct PrefixAssigneeExprInner {
-    _0: CharLiteral<b'*'>,
+    _0: DerefToken,
     _1: Ws,
     pub expr: Box<PrefixAssigneeExpr>,
 }
@@ -344,7 +410,6 @@ pub(crate) struct PostfixAssigneeExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum PostfixAssigneeExprTail {
-    Variable(VariableReference),
     Index(AssigneeIndexExpr),
     Member(AssigneeMemberExpr),
 }
@@ -352,17 +417,17 @@ pub(crate) enum PostfixAssigneeExprTail {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AssigneeIndexExpr {
     _0: Ws,
-    _1: CharLiteral<b'['>,
+    _1: OpeningBracketToken,
     _2: Ws,
     pub index_expr: Expr,
-    _3: CharLiteral<b']'>,
+    _3: ClosingBracketToken,
     pub tail: Option<Box<PostfixAssigneeExprTail>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AssigneeMemberExpr {
     _0: Ws,
-    _1: CharLiteral<b'.'>,
+    _1: PeriodToken,
     _2: Ws,
     pub path: IdentifierPath,
     pub tail: Option<Box<PostfixAssigneeExprTail>>,
@@ -381,48 +446,11 @@ pub(crate) enum AssignmentOperator {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct EqToken {
-    #[literal = b"="] _0: (),
+pub(crate) struct ExprStatement {
+    pub expr: Expr,
+    _0: Ws,
+    _1: SemicolonToken,
 }
-
-#[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct OrEqToken {
-    #[literal = b"or="] _0: (),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct XorEqToken {
-    #[literal = b"xor="] _0: (),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct AndEqToken {
-    #[literal = b"and="] _0: (),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct AddEqToken {
-    #[literal = b"+="] _0: (),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct SubEqToken {
-    #[literal = b"-="] _0: (),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct MultEqToken {
-    #[literal = b"*="] _0: (),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct DivEqToken {
-    #[literal = b"/="] _0: (),
-}
-
-
-
-type ExprStatement = Expr;
 
 
 
@@ -434,61 +462,61 @@ pub(crate) struct Expr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum OrExpr {
-    Xor(XorExpr),
     Or(OrExprInner),
+    Xor(XorExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct OrExprInner {
     pub lhs: XorExpr,
     _0: Fws,
-    #[literal = b"or"] _1: (),
+    _1: OrToken,
     _2: Fws,
     pub rhs: Box<OrExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum XorExpr {
-    And(AndExpr),
     Xor(XorExprInner),
+    And(AndExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct XorExprInner {
     pub lhs: AndExpr,
     _0: Fws,
-    #[literal = b"xor"] _1: (),
+    _1: XorToken,
     _2: Fws,
     pub rhs: Box<XorExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum AndExpr {
-    Equality(EqualityExpr),
     And(AndExprInner),
+    Equality(EqualityExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AndExprInner {
     pub lhs: EqualityExpr,
     _0: Fws,
-    #[literal = b"and"] _1: (),
+    _1: AndToken,
     _2: Fws,
     pub rhs: Box<AndExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum EqualityExpr {
-    Comp(CompExpr),
     Eq(EqExpr),
     Neq(NeqExpr),
+    Comp(CompExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct EqExpr {
     pub lhs: CompExpr,
     _0: Ws,
-    #[literal = b"=="] _1: (),
+    _1: EqCompToken,
     _2: Ws,
     pub rhs: Box<EqualityExpr>,
 }
@@ -497,25 +525,25 @@ pub(crate) struct EqExpr {
 pub(crate) struct NeqExpr {
     pub lhs: CompExpr,
     _0: Ws,
-    #[literal = b"!="] _1: (),
+    _1: NeqCompToken,
     _2: Ws,
     pub rhs: Box<EqualityExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum CompExpr {
-    Additive(AdditiveExpr),
     Lt(LtExpr),
     Gt(GtExpr),
     Lte(LteExpr),
     Gte(GteExpr),
+    Additive(AdditiveExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LtExpr {
     pub lhs: AdditiveExpr,
     _0: Ws,
-    _1: CharLiteral<b'<'>,
+    _1: LtToken,
     _2: Ws,
     pub rhs: Box<CompExpr>,
 }
@@ -524,7 +552,7 @@ pub(crate) struct LtExpr {
 pub(crate) struct GtExpr {
     pub lhs: AdditiveExpr,
     _0: Ws,
-    _1: CharLiteral<b'>'>,
+    _1: GtToken,
     _2: Ws,
     pub rhs: Box<CompExpr>,
 }
@@ -533,7 +561,7 @@ pub(crate) struct GtExpr {
 pub(crate) struct LteExpr {
     pub lhs: AdditiveExpr,
     _0: Ws,
-    #[literal = b"<="] _1: (),
+    _1: LteqToken,
     _2: Ws,
     pub rhs: Box<CompExpr>,
 }
@@ -542,23 +570,23 @@ pub(crate) struct LteExpr {
 pub(crate) struct GteExpr {
     pub lhs: AdditiveExpr,
     _0: Ws,
-    #[literal = b">="] _1: (),
+    _1: GteqToken,
     _2: Ws,
     pub rhs: Box<CompExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum AdditiveExpr {
-    Multiplicative(MultiplicativeExpr),
     Add(AddExpr),
     Sub(SubExpr),
+    Multiplicative(MultiplicativeExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AddExpr {
     pub lhs: MultiplicativeExpr,
     _0: Ws,
-    _1: CharLiteral<b'+'>,
+    _1: AddToken,
     _2: Ws,
     pub rhs: Box<AdditiveExpr>,
 }
@@ -567,23 +595,23 @@ pub(crate) struct AddExpr {
 pub(crate) struct SubExpr {
     pub lhs: MultiplicativeExpr,
     _0: Ws,
-    _1: CharLiteral<b'-'>,
+    _1: SubToken,
     _2: Ws,
     pub rhs: Box<AdditiveExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum MultiplicativeExpr {
-    Prefix(PrefixExpr),
     Mult(MultExpr),
     Div(DivExpr),
+    Prefix(PrefixExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MultExpr {
     pub lhs: PrefixExpr,
     _0: Ws,
-    _1: CharLiteral<b'*'>,
+    _1: MultToken,
     _2: Ws,
     pub rhs: Box<MultiplicativeExpr>,
 }
@@ -592,52 +620,52 @@ pub(crate) struct MultExpr {
 pub(crate) struct DivExpr {
     pub lhs: PrefixExpr,
     _0: Ws,
-    _1: CharLiteral<b'/'>,
+    _1: DivToken,
     _2: Ws,
     pub rhs: Box<MultiplicativeExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum PrefixExpr {
-    Postfix(PostfixExpr),
     Ref(RefExpr),
     Deref(DerefExpr),
     Minus(MinusExpr),
     Invert(InvertExpr),
     Not(NotExpr),
+    Postfix(PostfixExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct RefExpr {
-    _0: CharLiteral<b'&'>,
+    _0: RefToken,
     _1: Ws,
     pub expr: Box<PrefixExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct DerefExpr {
-    _0: CharLiteral<b'*'>,
+    _0: DerefToken,
     _1: Ws,
     pub expr: Box<PrefixExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MinusExpr {
-    _0: CharLiteral<b'-'>,
+    _0: MinusToken,
     _1: Ws,
     pub expr: Box<PrefixExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct InvertExpr {
-    _0: CharLiteral<b'~'>,
+    _0: InvertToken,
     _1: Ws,
     pub expr: Box<PrefixExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct NotExpr {
-    _0: CharLiteral<b'!'>,
+    _0: NotToken,
     _1: Ws,
     pub expr: Box<PrefixExpr>,
 }
@@ -650,36 +678,36 @@ pub(crate) struct PostfixExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum PostfixExprTail {
-    Inner(InnerExpr),
     IndexExpr(IndexExpr),
     CallExpr(CallExpr),
     MemberExpr(MemberExpr),
+    Inner(InnerExpr),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct IndexExpr {
     _0: Ws,
-    _1: CharLiteral<b'['>,
+    _1: OpeningBracketToken,
     _2: Ws,
     pub index_expr: Box<Expr>,
-    _3: CharLiteral<b']'>,
+    _3: ClosingBracketToken,
     pub tail: Option<Box<PostfixExprTail>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct CallExpr {
     _0: Ws,
-    _1: CharLiteral<b'('>,
+    _1: OpeningParenToken,
     _2: Ws,
     pub args: Option<FunctionArgumentList>,
-    _3: CharLiteral<b')'>,
+    _3: ClosingParenToken,
     pub tail: Option<Box<PostfixExprTail>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MemberExpr {
     _0: Ws,
-    _1: CharLiteral<b'.'>,
+    _1: PeriodToken,
     _2: Ws,
     pub path: IdentifierPath,
     pub tail: Option<Box<PostfixExprTail>>,
@@ -700,17 +728,17 @@ pub(crate) enum InnerExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct EnclosedExpr {
-    _0: CharLiteral<b'('>,
+    _0: OpeningParenToken,
     pub expr: Box<Expr>,
-    _1: CharLiteral<b')'>,
+    _1: ClosingParenToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct StructInitExpr {
-    _0: CharLiteral<b'{'>,
+    _0: OpeningBracketToken,
     _1: Ws,
     pub list: Option<StructInitList>,
-    _2: CharLiteral<b'}'>
+    _2: ClosingBracketToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -731,7 +759,7 @@ pub(crate) struct StructInitListPart {
 pub(crate) struct StructInitEntry {
     pub name: VariableName,
     _0: Ws,
-    _1: CharLiteral<b'='>,
+    _1: EqToken,
     _2: Ws,
     pub expr: Box<Expr>,
 }
@@ -740,13 +768,13 @@ pub(crate) struct StructInitEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct BuiltinFunctionCallExpr {
-    _0: CharLiteral<b'@'>,
+    _0: BuiltinFunctionCallPrefixToken,
     pub function: FunctionReference,
     _1: Ws,
-    _2: CharLiteral<b'('>,
+    _2: OpeningParenToken,
     _3: Ws,
     pub args: Option<FunctionArgumentList>,
-    _4: CharLiteral<b')'>,
+    _4: ClosingParenToken,
 }
 
 type FunctionReference = VariableReference;
@@ -779,27 +807,27 @@ pub(crate) enum LiteralIntExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralInt {
-    minus: Option<CharLiteral<b'-'>>,
-    digits: Span<OnePlus<Numerical>>,
+    pub minus: Option<MinusToken>,
+    pub digits: Span<OnePlus<Numerical>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralIntBinary {
-    #[literal = b"0b"] _0: (),
-    digits: Span<OnePlus<BinaryOrUnderscore>>,
+    _0: BinaryPrefixToken,
+    pub digits: Span<OnePlus<BinaryOrUnderscore>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralIntHexadecimal {
-    #[literal = b"0x"] _0: (),
-    digits: Span<OnePlus<HexadecimalOrUnderscore>>,
+    _0: HexadecimalPrefixToken,
+    pub digits: Span<OnePlus<HexadecimalOrUnderscore>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralIntChar {
-    _0: CharLiteral<b'\''>,
-    char: CharChar,
-    _1: CharLiteral<b'\''>,
+    _0: SingleQuoteToken,
+    pub char: CharChar,
+    _1: SingleQuoteToken,
 }
 
 
@@ -814,47 +842,47 @@ pub(crate) enum LiteralFloatExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralFloat {
-    minus: Option<CharLiteral<b'-'>>,
-    before_decimal: Span<OnePlus<Numerical>>,
-    _0: CharLiteral<b'.'>,
-    after_decimal: Span<OnePlus<Numerical>>,
+    pub minus: Option<MinusToken>,
+    pub before_decimal: Span<OnePlus<Numerical>>,
+    _0: PeriodToken,
+    pub after_decimal: Span<OnePlus<Numerical>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralFloatScientific {
-    mantissa_minus: Option<CharLiteral<b'-'>>,
-    #[literal = b"0."] _0: (),
-    mantissa: Span<OnePlus<Numerical>>,
-    _1: CharLiteral<b'E'>,
-    exponent_minus: Option<CharLiteral<b'-'>>,
-    exponent: Span<OnePlus<Numerical>>,
+    pub mantissa_minus: Option<MinusToken>,
+    _0: FloatScientificPrefixToken,
+    pub mantissa: Span<OnePlus<Numerical>>,
+    _1: ScientificExponentToken,
+    pub exponent_minus: Option<MinusToken>,
+    pub exponent: Span<OnePlus<Numerical>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralFloatBinary {
-    mantissa_minus: Option<CharLiteral<b'-'>>,
-    #[literal = b"0b"] _0: (),
-    mantissa: Span<OnePlus<BinaryOrUnderscore>>,
-    _1: CharLiteral<b'E'>,
-    exponent_minus: Option<CharLiteral<b'-'>>,
-    exponent: Span<OnePlus<BinaryOrUnderscore>>,
+    pub mantissa_minus: Option<MinusToken>,
+    _0: BinaryPrefixToken,
+    pub mantissa: Span<OnePlus<BinaryOrUnderscore>>,
+    _1: ScientificExponentToken,
+    pub exponent_minus: Option<MinusToken>,
+    pub exponent: Span<OnePlus<BinaryOrUnderscore>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralFloatHexadecimal {
-    mantissa_minus: Option<CharLiteral<b'-'>>,
-    #[literal = b"0x"] _0: (),
-    mantissa: Span<OnePlus<HexadecimalOrUnderscore>>,
-    _1: CharLiteral<b'E'>,
-    exponent_minus: Option<CharLiteral<b'-'>>,
-    exponent: Span<OnePlus<HexadecimalOrUnderscore>>,
+    pub mantissa_minus: Option<MinusToken>,
+    _0: HexadecimalPrefixToken,
+    pub mantissa: Span<OnePlus<HexadecimalOrUnderscore>>,
+    _1: ScientificExponentToken,
+    pub exponent_minus: Option<MinusToken>,
+    pub exponent: Span<OnePlus<HexadecimalOrUnderscore>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LiteralStringExpr {
-    _0: CharLiteral<b'"'>,
+    _0: DoubleQuoteToken,
     pub string: LiteralString,
-    _1: CharLiteral<b'"'>,
+    _1: DoubleQuoteToken,
 }
 
 type LiteralString = Span<ZeroPlus<StringChar>>;
@@ -865,7 +893,7 @@ type VisibilitySpecifier = Option<Public>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct Public {
-    #[literal = b"public"] _0: (),
+    _0: PublicToken,
     _1: Fws,
 }
 
@@ -874,31 +902,26 @@ pub(crate) struct VariableDeclaration {
     pub mutability_specifier: MutabilitySpecifier,
     pub variable_name: VariableName,
     _0: Fws,
-    _1: CharLiteral<b':'>,
+    _1: ColonToken,
     _2: Ws,
     pub type_reference: TypeReference,
     _3: Fws,
-    _4: CharLiteral<b'='>,
+    _4: EqToken,
     _5: Ws,
     pub rhs: VariableDeclarationRhs,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) enum VariableDeclarationRhs {
-    Undefined(Undefined),
+    Undefined(UndefinedToken),
     Expr(Expr),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
-pub(crate) struct Undefined {
-    #[literal = b"undefined"] _0: (),
 }
 
 type MutabilitySpecifier = Option<Mutable>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct Mutable {
-    #[literal = b"mut"] _0: (),
+    _0: MutableToken,
     _1: Fws,
 }
 
@@ -923,7 +946,7 @@ pub(crate) enum TypeReference {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct PrefixedTypeReference {
-    _0: CharLiteral<b'&'>,
+    _0: RefToken,
     _1: Ws,
     type_reference: Box<TypeReference>,
 }
@@ -939,15 +962,14 @@ type Fws = Ignore<OnePlus<WhitespaceChar>>;
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct WsComma {
     _0: Ws,
-    _1: CharLiteral<b','>,
+    _1: CommaToken,
 }
 
 
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct GlobalIdentifierPath {
-    #[literal = b"root"]
-    _0: (),
+    _0: RootToken,
     pub path_parts: OnePlus<PathPart>,
 }
 
@@ -960,7 +982,7 @@ pub(crate) struct IdentifierPath {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct PathPart {
     _0: Ws,
-    _1: CharLiteral<b'.'>,
+    _1: PeriodToken,
     _2: Ws,
     pub identifier: Identifier,
 }
