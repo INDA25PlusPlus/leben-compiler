@@ -13,8 +13,8 @@ where
 }
 
 impl<T> Debug for WithSpan<T>
-where T: 
-    for<'a> Parsable<'a> + Debug
+where
+    T: for<'a> Parsable<'a> + Debug
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WithSpan")
@@ -270,16 +270,16 @@ where
 
 #[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Ignore<T>
-where T: 
-    for<'a> Parsable<'a> 
+where
+    T: for<'a> Parsable<'a> 
 {
     #[serde(skip_serializing)]
     phantom_data: PhantomData<T>,
 }
 
 impl<T> Debug for Ignore<T>
-where T: 
-    for<'a> Parsable<'a> 
+where
+    T: for<'a> Parsable<'a> 
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Ignore").finish()
@@ -287,8 +287,8 @@ where T:
 }
 
 impl<'a, T> Parsable<'a> for Ignore<T>
-where T:
-    for<'b> Parsable<'b>
+where
+    T: for<'b> Parsable<'b>
 {
     fn parse(stream: &mut ScopedStream<'a>) -> ParseOutcome<Self> {
         stream
@@ -307,6 +307,36 @@ where T:
 }
 
 pub type Span<T> = WithSpan<Ignore<T>>;
+
+pub struct WithIndex<T>
+where
+    T: for<'b> Parsable<'b>
+{
+    node: T,
+    index: usize,
+}
+
+impl<'a, T> Parsable<'a> for WithIndex<T>
+where
+    T: for<'b> Parsable<'b> + Debug
+{
+    fn parse(stream: &mut ScopedStream<'a>) -> ParseOutcome<Self>
+    {
+        let index = stream.index();
+        stream
+            .scope(|stream| T::parse(stream))
+            .map(|result| result.map(
+                |node| WithIndex { node, index }))
+    }
+    
+    fn error() -> ParseError {
+        T::error()
+    }
+    
+    fn propagated_error() -> Option<ParseError> {
+        None
+    }
+}
 
 impl<'a, T> Parsable<'a> for Box<T>
 where

@@ -54,7 +54,7 @@
 //! }
 //! ```
 
-use std::{fmt::Debug, iter};
+use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 use crate::stream::ScopedStream;

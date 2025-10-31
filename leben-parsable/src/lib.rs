@@ -1,15 +1,15 @@
 pub mod stream;
-pub mod parser;
+pub mod parsable;
 pub mod parsable_types;
 
 pub use stream::*;
-pub use parser::*;
+pub use parsable::*;
 pub use parsable_types::*;
 pub use leben_parsable_derive::Parsable;
 
 #[cfg(test)]
 mod parse_tests {
-    use crate::{parser::{parse_literal, CharLiteral, Parsable, Repeat, ZeroPlus}, stream::ScopedStream, Unparsable};
+    use crate::{parsable::{parse_literal, CharLiteral, Parsable, Repeat, ZeroPlus}, stream::ScopedStream, Unparsable};
     use std::fmt::Debug;
 
     enum Variants {

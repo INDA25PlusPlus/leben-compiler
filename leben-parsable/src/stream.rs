@@ -1,4 +1,4 @@
-use crate::{ParseErrorContext, ParseOutcome, parser::Parsable};
+use crate::{ParseErrorContext, ParseOutcome, parsable::Parsable};
 
 pub struct ScopedStream<'a> {
     buffer: &'a [u8],
