@@ -1,7 +1,7 @@
 use leben_parsable::*;
 use serde::{Deserialize, Serialize};
 
-Literal! {
+literals! {
     pub(crate) struct CommentToken = b"#";
     pub(crate) struct CommaToken = b",";
     pub(crate) struct SemicolonToken = b";";
@@ -73,14 +73,14 @@ pub(crate) struct SourceFile {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct Module {
-    _0: Ws,
+    _0: Ows,
     pub declarations: ZeroPlus<ModulePart>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ModulePart {
     pub declaration: GlobalDeclaration,
-    _0: Ws,
+    _0: Ows,
 }
 
 
@@ -109,9 +109,9 @@ pub(crate) struct Comment {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ModuleDeclaration {
     _0: ModuleToken,
-    _1: Fws,
+    _1: Ws,
     pub module_name: ModuleName,
-    _2: Ws,
+    _2: Ows,
     _3: OpeningBraceToken,
     pub module: Module,
     _4: ClosingBraceToken,
@@ -125,9 +125,9 @@ type ModuleName = IdentifierPath;
 pub(crate) struct StaticDeclaration {
     pub visibility: VisibilitySpecifier,
     _0: StaticToken,
-    _1: Fws,
+    _1: Ws,
     pub declaration: VariableDeclaration,
-    _2: Ws,
+    _2: Ows,
     _3: SemicolonToken,
 }
 
@@ -137,30 +137,30 @@ pub(crate) struct StaticDeclaration {
 pub(crate) struct MethodDeclaration {
     pub visibility: VisibilitySpecifier,
     _0: MethodToken,
-    _1: Fws,
+    _1: Ws,
     pub function_name: MethodName,
-    _2: Fws,
+    _2: Ws,
     _3: OpeningParenToken,
-    _4: Ws,
+    _4: Ows,
     pub members: Option<MethodParameterList>,
     _5: ClosingParenToken,
-    _6: Ws,
+    _6: Ows,
     pub return_type_and_body: FunctionReturnTypeAndBody,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MethodName {
     pub type_name: TypeName,
-    _0: Ws,
+    _0: Ows,
     _1: PeriodToken,
-    _2: Ws,
+    _2: Ows,
     pub function_name: FunctionName,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MethodParameterList {
     _0: ThisToken,
-    _1: Ws,
+    _1: Ows,
     pub parameters: ZeroPlus<MethodParameterListPart>,
     _2: Option<CommaWs>,
 }
@@ -168,15 +168,15 @@ pub(crate) struct MethodParameterList {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MethodParameterListPart {
     _0: CommaToken,
-    _1: Ws,
+    _1: Ows,
     pub parameter: FunctionParameter,
-    _2: Ws,
+    _2: Ows,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct CommaWs {
     _0: CommaToken,
-    _1: Ws,
+    _1: Ows,
 }
 
 
@@ -185,14 +185,14 @@ pub(crate) struct CommaWs {
 pub(crate) struct FunctionDeclaration {
     pub visibility: VisibilitySpecifier,
     _0: FunctionToken,
-    _1: Fws,
+    _1: Ws,
     pub function_name: FunctionName,
-    _2: Ws,
+    _2: Ows,
     _3: OpeningParenToken,
-    _4: Ws,
+    _4: Ows,
     pub members: Option<FunctionParameterList>,
     _5: ClosingParenToken,
-    _6: Ws,
+    _6: Ows,
     pub return_type_and_body: FunctionReturnTypeAndBody,
 }
 
@@ -201,22 +201,22 @@ pub(crate) struct FunctionParameterList {
     pub members: ZeroPlus<FunctionParameterListPart>,
     pub last_member: FunctionParameter,
     _0: Option<WsComma>,
-    _1: Ws,
+    _1: Ows,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct FunctionParameterListPart {
     pub member: FunctionParameter,
     _0: WsComma,
-    _1: Ws,
+    _1: Ows,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct FunctionParameter {
     pub name: FunctionParameterName,
-    _0: Ws,
+    _0: Ows,
     _1: ColonToken,
-    _2: Ws,
+    _2: Ows,
     pub type_ref: TypeReference,
 }
 
@@ -233,9 +233,9 @@ pub(crate) struct FunctionReturnTypeAndBody {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct FunctionReturnType {
     _0: ColonToken,
-    _1: Ws,
+    _1: Ows,
     pub type_ref: TypeReference,
-    _2: Fws,
+    _2: Ws,
 }
 
 
@@ -244,11 +244,11 @@ pub(crate) struct FunctionReturnType {
 pub(crate) struct StructDeclaration {
     pub visibility: VisibilitySpecifier,
     _0: StructToken,
-    _1: Fws,
+    _1: Ws,
     pub type_name: TypeName,
-    _2: Fws,
+    _2: Ws,
     _3: OpeningBraceToken,
-    _4: Ws,
+    _4: Ows,
     pub members: Option<StructMemberList>,
     _5: ClosingBraceToken,
 }
@@ -258,7 +258,7 @@ pub(crate) struct StructMemberList {
     pub members: ZeroPlus<StructMemberListPart>,
     pub last_member: StructMember,
     _0: Option<WsComma>,
-    _1: Ws,
+    _1: Ows,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -270,9 +270,9 @@ pub(crate) struct StructMemberListPart {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct StructMember {
     pub name: StructMemberName,
-    _0: Ws,
+    _0: Ows,
     _1: ColonToken,
-    _2: Ws,
+    _2: Ows,
     pub type_ref: TypeReference,
 }
 
@@ -295,7 +295,7 @@ pub(crate) enum Statement {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct CompoundStatement {
     _0: OpeningBraceToken,
-    _1: Ws,
+    _1: Ows,
     pub statements: ZeroPlus<CompoundStatementPart>,
     _2: ClosingBraceToken,
 }
@@ -303,7 +303,7 @@ pub(crate) struct CompoundStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct CompoundStatementPart {
     pub statement: Statement,
-    _0: Ws,
+    _0: Ows,
 }
 
 
@@ -318,31 +318,31 @@ pub(crate) struct IfStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct IfClause {
-    _0: Fws,
+    _0: Ws,
     pub expr: Expr,
-    _1: Fws,
+    _1: Ws,
     pub block: CompoundStatement,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ElseIfClause {
-    _0: Fws,
+    _0: Ws,
     _1: ElseIfToken,
     pub if_clause: IfClause,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ElseClause {
-    _0: Fws,
+    _0: Ws,
     _1: ElseToken,
-    _2: Fws,
+    _2: Ws,
     pub block: CompoundStatement,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LoopStatement {
     _0: LoopToken,
-    _1: Fws,
+    _1: Ws,
     pub block: CompoundStatement,
 }
 
@@ -350,29 +350,29 @@ pub(crate) struct LoopStatement {
 pub(crate) struct ReturnStatement {
     _0: ReturnToken,
     pub expr: Option<ReturnStatementExpr>,
-    _1: Ws,
+    _1: Ows,
     _2: SemicolonToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ReturnStatementExpr {
-    _0: Fws,
+    _0: Ws,
     pub expr: Expr,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct BreakStatement {
     _0: BreakToken,
-    _1: Ws,
+    _1: Ows,
     _2: SemicolonToken,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct VariableDeclarationStatement {
     _0: LetToken,
-    _1: Fws,
+    _1: Ws,
     pub declaration: VariableDeclaration,
-    _2: Ws,
+    _2: Ows,
     _3: SemicolonToken,
 }
 
@@ -381,11 +381,11 @@ pub(crate) struct VariableDeclarationStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AssignmentStatement {
     pub lhs: PrefixAssigneeExpr,
-    _0: Ws,
+    _0: Ows,
     pub op: AssignmentOperator,
-    _1: Ws,
+    _1: Ows,
     pub rhs: Expr,
-    _2: Ws,
+    _2: Ows,
     _3: SemicolonToken,
 }
 
@@ -398,7 +398,7 @@ pub(crate) enum PrefixAssigneeExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct PrefixAssigneeExprInner {
     _0: DerefToken,
-    _1: Ws,
+    _1: Ows,
     pub expr: Box<PrefixAssigneeExpr>,
 }
 
@@ -416,9 +416,9 @@ pub(crate) enum PostfixAssigneeExprTail {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AssigneeIndexExpr {
-    _0: Ws,
+    _0: Ows,
     _1: OpeningBracketToken,
-    _2: Ws,
+    _2: Ows,
     pub index_expr: Expr,
     _3: ClosingBracketToken,
     pub tail: Option<Box<PostfixAssigneeExprTail>>,
@@ -426,9 +426,9 @@ pub(crate) struct AssigneeIndexExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AssigneeMemberExpr {
-    _0: Ws,
+    _0: Ows,
     _1: PeriodToken,
-    _2: Ws,
+    _2: Ows,
     pub path: IdentifierPath,
     pub tail: Option<Box<PostfixAssigneeExprTail>>,
 }
@@ -448,7 +448,7 @@ pub(crate) enum AssignmentOperator {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct ExprStatement {
     pub expr: Expr,
-    _0: Ws,
+    _0: Ows,
     _1: SemicolonToken,
 }
 
@@ -457,7 +457,7 @@ pub(crate) struct ExprStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct Expr {
     pub or_expr: OrExpr,
-    _0: Ws,
+    _0: Ows,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -469,9 +469,9 @@ pub(crate) enum OrExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct OrExprInner {
     pub lhs: XorExpr,
-    _0: Fws,
+    _0: Ws,
     _1: OrToken,
-    _2: Fws,
+    _2: Ws,
     pub rhs: Box<OrExpr>,
 }
 
@@ -484,9 +484,9 @@ pub(crate) enum XorExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct XorExprInner {
     pub lhs: AndExpr,
-    _0: Fws,
+    _0: Ws,
     _1: XorToken,
-    _2: Fws,
+    _2: Ws,
     pub rhs: Box<XorExpr>,
 }
 
@@ -499,9 +499,9 @@ pub(crate) enum AndExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AndExprInner {
     pub lhs: EqualityExpr,
-    _0: Fws,
+    _0: Ws,
     _1: AndToken,
-    _2: Fws,
+    _2: Ws,
     pub rhs: Box<AndExpr>,
 }
 
@@ -515,18 +515,18 @@ pub(crate) enum EqualityExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct EqExpr {
     pub lhs: CompExpr,
-    _0: Ws,
+    _0: Ows,
     _1: EqCompToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<EqualityExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct NeqExpr {
     pub lhs: CompExpr,
-    _0: Ws,
+    _0: Ows,
     _1: NeqCompToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<EqualityExpr>,
 }
 
@@ -542,36 +542,36 @@ pub(crate) enum CompExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LtExpr {
     pub lhs: AdditiveExpr,
-    _0: Ws,
+    _0: Ows,
     _1: LtToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<CompExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct GtExpr {
     pub lhs: AdditiveExpr,
-    _0: Ws,
+    _0: Ows,
     _1: GtToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<CompExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct LteExpr {
     pub lhs: AdditiveExpr,
-    _0: Ws,
+    _0: Ows,
     _1: LteqToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<CompExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct GteExpr {
     pub lhs: AdditiveExpr,
-    _0: Ws,
+    _0: Ows,
     _1: GteqToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<CompExpr>,
 }
 
@@ -585,18 +585,18 @@ pub(crate) enum AdditiveExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct AddExpr {
     pub lhs: MultiplicativeExpr,
-    _0: Ws,
+    _0: Ows,
     _1: AddToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<AdditiveExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct SubExpr {
     pub lhs: MultiplicativeExpr,
-    _0: Ws,
+    _0: Ows,
     _1: SubToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<AdditiveExpr>,
 }
 
@@ -610,18 +610,18 @@ pub(crate) enum MultiplicativeExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MultExpr {
     pub lhs: PrefixExpr,
-    _0: Ws,
+    _0: Ows,
     _1: MultToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<MultiplicativeExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct DivExpr {
     pub lhs: PrefixExpr,
-    _0: Ws,
+    _0: Ows,
     _1: DivToken,
-    _2: Ws,
+    _2: Ows,
     pub rhs: Box<MultiplicativeExpr>,
 }
 
@@ -638,35 +638,35 @@ pub(crate) enum PrefixExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct RefExpr {
     _0: RefToken,
-    _1: Ws,
+    _1: Ows,
     pub expr: Box<PrefixExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct DerefExpr {
     _0: DerefToken,
-    _1: Ws,
+    _1: Ows,
     pub expr: Box<PrefixExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MinusExpr {
     _0: MinusToken,
-    _1: Ws,
+    _1: Ows,
     pub expr: Box<PrefixExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct InvertExpr {
     _0: InvertToken,
-    _1: Ws,
+    _1: Ows,
     pub expr: Box<PrefixExpr>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct NotExpr {
     _0: NotToken,
-    _1: Ws,
+    _1: Ows,
     pub expr: Box<PrefixExpr>,
 }
 
@@ -686,9 +686,9 @@ pub(crate) enum PostfixExprTail {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct IndexExpr {
-    _0: Ws,
+    _0: Ows,
     _1: OpeningBracketToken,
-    _2: Ws,
+    _2: Ows,
     pub index_expr: Box<Expr>,
     _3: ClosingBracketToken,
     pub tail: Option<Box<PostfixExprTail>>,
@@ -696,9 +696,9 @@ pub(crate) struct IndexExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct CallExpr {
-    _0: Ws,
+    _0: Ows,
     _1: OpeningParenToken,
-    _2: Ws,
+    _2: Ows,
     pub args: Option<FunctionArgumentList>,
     _3: ClosingParenToken,
     pub tail: Option<Box<PostfixExprTail>>,
@@ -706,9 +706,9 @@ pub(crate) struct CallExpr {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct MemberExpr {
-    _0: Ws,
+    _0: Ows,
     _1: PeriodToken,
-    _2: Ws,
+    _2: Ows,
     pub path: IdentifierPath,
     pub tail: Option<Box<PostfixExprTail>>,
 }
@@ -736,7 +736,7 @@ pub(crate) struct EnclosedExpr {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct StructInitExpr {
     _0: OpeningBracketToken,
-    _1: Ws,
+    _1: Ows,
     pub list: Option<StructInitList>,
     _2: ClosingBracketToken,
 }
@@ -746,7 +746,7 @@ pub(crate) struct StructInitList {
     pub entries: ZeroPlus<StructInitListPart>,
     pub last_entry: StructInitEntry,
     _0: Option<WsComma>,
-    _1: Ws,
+    _1: Ows,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -758,9 +758,9 @@ pub(crate) struct StructInitListPart {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct StructInitEntry {
     pub name: VariableName,
-    _0: Ws,
+    _0: Ows,
     _1: EqToken,
-    _2: Ws,
+    _2: Ows,
     pub expr: Box<Expr>,
 }
 
@@ -770,9 +770,9 @@ pub(crate) struct StructInitEntry {
 pub(crate) struct BuiltinFunctionCallExpr {
     _0: BuiltinFunctionCallPrefixToken,
     pub function: FunctionReference,
-    _1: Ws,
+    _1: Ows,
     _2: OpeningParenToken,
-    _3: Ws,
+    _3: Ows,
     pub args: Option<FunctionArgumentList>,
     _4: ClosingParenToken,
 }
@@ -784,7 +784,7 @@ pub(crate) struct FunctionArgumentList {
     pub args: ZeroPlus<FunctionArgumentListPart>,
     pub last_arg: FunctionArgument,
     _0: Option<WsComma>,
-    _1: Ws,
+    _1: Ows,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -894,20 +894,20 @@ type VisibilitySpecifier = Option<Public>;
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct Public {
     _0: PublicToken,
-    _1: Fws,
+    _1: Ws,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct VariableDeclaration {
     pub mutability_specifier: MutabilitySpecifier,
     pub variable_name: VariableName,
-    _0: Fws,
+    _0: Ws,
     _1: ColonToken,
-    _2: Ws,
+    _2: Ows,
     pub type_reference: TypeReference,
-    _3: Fws,
+    _3: Ws,
     _4: EqToken,
-    _5: Ws,
+    _5: Ows,
     pub rhs: VariableDeclarationRhs,
 }
 
@@ -922,7 +922,7 @@ type MutabilitySpecifier = Option<Mutable>;
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct Mutable {
     _0: MutableToken,
-    _1: Fws,
+    _1: Ws,
 }
 
 type VariableName = Identifier;
@@ -947,7 +947,7 @@ pub(crate) enum TypeReference {
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct PrefixedTypeReference {
     _0: RefToken,
-    _1: Ws,
+    _1: Ows,
     type_reference: Box<TypeReference>,
 }
 
@@ -955,13 +955,13 @@ pub(crate) struct PrefixedTypeReference {
 
 type Identifier = Span<IdentifierInner>;
 
-type Ws = Ignore<ZeroPlus<WhitespaceChar>>;
+type Ows = Ignore<ZeroPlus<WhitespaceChar>>;
 
-type Fws = Ignore<OnePlus<WhitespaceChar>>;
+type Ws = Ignore<OnePlus<WhitespaceChar>>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct WsComma {
-    _0: Ws,
+    _0: Ows,
     _1: CommaToken,
 }
 
@@ -981,9 +981,9 @@ pub(crate) struct IdentifierPath {
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct PathPart {
-    _0: Ws,
+    _0: Ows,
     _1: PeriodToken,
-    _2: Ws,
+    _2: Ows,
     pub identifier: Identifier,
 }
 
@@ -1014,6 +1014,7 @@ pub(crate) enum CharChar {
     EscapedSingleQuote(EscapedSingleQuote),
     EscapedChar(EscapedChar),
     NonEscapedChar(NonEscapedChar),
+    NonAsciiByte(NonAsciiByte),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
@@ -1022,7 +1023,10 @@ pub(crate) enum StringChar {
     SingleQuote(CharLiteral<b'\''>),
     EscapedChar(EscapedChar),
     NonEscapedChar(NonEscapedChar),
+    NonAsciiByte(NonAsciiByte),
 }
+
+type NonAsciiByte = CharRange<b'\x80', b'\xff'>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Parsable, Deserialize, Serialize)]
 pub(crate) struct EscapedSingleQuote {

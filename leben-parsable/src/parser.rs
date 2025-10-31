@@ -1,317 +1,155 @@
-use std::marker::PhantomData;
-use std::fmt::Debug;
+//! # Examples
+//! ```rust
+//! struct TestStruct {
+//!     a: CharLiteral<b'a'>,
+//!     b: CharLiteral<b'b'>,
+//! }
+//!
+//! impl<'a> Parsable<'a> for TestStruct {
+//!     fn parse(stream: &mut ScopedStream<'a>) -> ParseOutcome<Self>
+//!     where
+//!         Self: Sized
+//!     {
+//!         stream.scope(|stream| {
+//!             Some(Ok(TestStruct {
+//!                 a: ok_or_throw!(CharLiteral::<b'a'>::parse(stream)?),
+//!                 b: ok_or_throw!(CharLiteral::<b'b'>::parse_or_error(stream)),
+//!             }))
+//!         })
+//!     }
+//!
+//!     fn error() -> ParseError {
+//!         String::from("TestStruct")
+//!     }
+//! }
+//!
+//! enum TestEnum {
+//!     X {
+//!         a: CharLiteral<b'a'>,
+//!         b: CharLiteral<b'b'>,
+//!     },
+//!     Y(TestStruct),
+//! }
+//!
+//! impl<'a> Parsable<'a> for TestEnum {
+//!     fn parse(stream: &mut ScopedStream<'a>) -> ParseOutcome<Self>
+//!     where
+//!         Self: Sized 
+//!     {
+//!         stream.scope(|stream| {
+//!             None
+//!                 .or_else(|| Some(Ok(TestEnum::X {
+//!                     a: ok_or_throw!(CharLiteral::<b'a'>::parse(stream)?),
+//!                     b: ok_or_throw!(CharLiteral::<b'b'>::parse_or_error(stream)),
+//!                 })))
+//!                 .or_else(|| Some(Ok(TestEnum::Y (
+//!                     ok_or_throw!(TestStruct::parse(stream)?),
+//!                 ))))
+//!         })
+//!     }
+//!
+//!     fn error() -> ParseError {
+//!         String::from("TestEnum")
+//!     }
+//! }
+//! ```
+
+use std::{fmt::Debug, iter};
 use serde::{Deserialize, Serialize};
 
 use crate::stream::ScopedStream;
 
-pub trait Parsable<'a>: Sized {
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self>;
+// a value of `None` symbolizes no match
+// a value of `Some(Err(_))` symbolizes a partial match with an error that should be propagated
+// a value of `Some(Ok(_))` symbolizes a complete match
+pub type ParseOutcome<T> = Option<ParseResult<T>>;
+
+pub type ParseResult<T> = Result<T, ParseErrorStack>;
+
+pub type ParseErrorStack = Vec<ParseErrorContext>;
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub struct ParseErrorContext {
+    pub error: ParseError,
+    pub source_position: usize,
 }
 
-#[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
-pub struct WithSpan<T>
-where
-    T: for<'a> Parsable<'a>
-{
-    pub node: T,
-    pub span: Vec<u8>,
-}
+pub type ParseError = String;
 
-impl<T> Debug for WithSpan<T>
-where T: 
-    for<'a> Parsable<'a> + Debug
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WithSpan")
-            .field("node", &self.node)
-            .field("span", &String::from_utf8_lossy(&self.span))
-            .finish()
-    }
-}
+pub trait Parsable<'a> {
+    fn parse(stream: &mut ScopedStream<'a>) -> ParseOutcome<Self>
+    where
+        Self: Sized;
 
-impl<'a, T> Parsable<'a> for WithSpan<T>
-where
-    T: for<'b> Parsable<'b> + Debug
-{
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<WithSpan<T>>
+    fn parse_or_error(stream: &mut ScopedStream<'a>) -> ParseResult<Self>
+    where
+        Self: Sized
     {
-        let res = stream
-            .scope_with_span(|stream| T::parse(stream))
-            .map(|(node, span)| WithSpan { node, span: span.to_owned() });
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG SPAN        {:?}",
-                res.as_ref().map(|span| String::from_utf8_lossy(&span.span)));
-        }
-        res
+        Self::parse(stream)
+            .unwrap_or_else(|| Err(vec![stream.error_here::<Self>()]))
     }
-}
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Repeat<T, const MIN: usize>
-where
-    T: for<'a> Parsable<'a> + Debug
-{
-    pub nodes: Vec<T>,
-}
+    /// Returns the error representing a missing value of this type. Should be of the form
+    /// "<expected value>" such that the error can be formatted into "expected Identifier", for 
+    /// example. For most types, this function should simply return the type name, or call the 
+    /// error function of an inner value.
+    // rust doesn't yet support const string formatting or generic parameters in static context,
+    // so we have to make this a non-const runtime function that returns an owned string
+    fn error() -> ParseError;
 
-impl<'a, T, const MIN: usize> Parsable<'a> for Repeat<T, MIN>
-where 
-    T: for<'b> Parsable<'b> + Debug
-{
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG REPEAT >>>> {} * {}", std::any::type_name::<T>(), MIN);
-        }
-        let mut nodes = Vec::new();
-        while let Some(node) = stream
-            .scope(|stream| T::parse(stream))
-        {
-            nodes.push(node);
-        }
-        let res = (nodes.len() >= MIN).then_some(Repeat { nodes });
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG REPEAT <<<< {} * {}\n{:?}", std::any::type_name::<T>(), MIN, &res);
-        }
-        res
+    /// Optionally returns an error to add to the error stack when propagating another error.
+    /// Defaults to `Some(Self::error())`.
+    fn propagated_error() -> Option<ParseError> {
+        Some(Self::error())
     }
-}
-
-pub type ZeroPlus<T> = Repeat<T, 0>;
-
-pub type OnePlus<T> = Repeat<T, 1>;
-
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
-pub struct RepeatLimited<T, const MIN: usize, const MAX: usize>
-where
-    T: for<'a> Parsable<'a>
-{
-    pub nodes: Vec<T>,
-}
-
-impl<'a, T, const MIN: usize, const MAX: usize> Parsable<'a> for RepeatLimited<T, MIN, MAX>
-where 
-    T: for<'b> Parsable<'b> + Debug
-{
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG REPEATLIM > {} * ({}-{})", std::any::type_name::<T>(), MIN, MAX);
-        }
-        let mut nodes = Vec::with_capacity(MAX);
-        for i in 0..MAX {
-            let node = stream
-                .scope(|stream| T::parse(stream));
-
-            if let Some(node) = node {
-                nodes.push(node);
-            } else {
-                let res = (i >= MIN).then_some(RepeatLimited { nodes });
-                #[cfg(feature = "leben_parsable_debug")] {
-                    println!("DEBUG REPEATLIM < {} * ({}-{})\n{:?}", std::any::type_name::<T>(), MIN, MAX, &res);
-                }
-                return res;
-            }
-        }
-        let res = Some(RepeatLimited { nodes });
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG REPEATLIM < {} * ({}-{})\n{:?}", std::any::type_name::<T>(), MIN, MAX, &res);
-        }
-        res
-    }
-}
-
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct CharLiteral<const CHAR: u8>;
-
-impl<'a, const CHAR: u8> Parsable<'a> for CharLiteral<CHAR> {
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        let res = stream.scope(|stream| {
-            stream.read(1, |slice| slice[0] == CHAR)
-                .map(|_| CharLiteral)
-        });
-        res
-    }
-}
-
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct CharRange<const START: u8, const END: u8>;
-
-impl<'a, const START: u8, const END: u8> Parsable<'a> for CharRange<START, END> {
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        stream.scope(|stream| {
-            stream.read(1, |slice| (START..=END).contains(&slice[0]))
-                .map(|_| CharRange)
-        })
-    }
-}
-
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct EndOfStream;
-
-impl<'a> Parsable<'a> for EndOfStream {
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        let res = stream.at_end().then_some(EndOfStream);
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG END         {:?}", &res);
-        }
-        res
-    }
-}
-
-#[derive(Clone, Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct WithEnd<T>
-where
-    T: for<'a> Parsable<'a>
-{
-    pub node: T
-}
-
-impl<'a, T> Parsable<'a> for WithEnd<T>
-where
-    T: for<'b> Parsable<'b>
-{
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        let res = stream
-            .scope(|stream| T::parse(stream))
-            .map(|node| WithEnd { node });
-        if !stream.at_end() { return None };
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG WITH END  < {}\n{:?}", std::any::type_name::<T>(), &res);
-        }
-        res
-    }
-}
-
-#[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Intersperse<T, S>
-where
-    T: for<'a> Parsable<'a>,
-    S: for<'b> Parsable<'b>,
-{
-    pub nodes: Vec<T>,
-    #[serde(skip_serializing)]
-    phantom_data: PhantomData<S>,
-}
-
-impl<'a, T, S> Parsable<'a> for Intersperse<T, S>
-where
-    T: for<'t> Parsable<'t>,
-    S: for<'s> Parsable<'s>,
-{
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG INTER >>>>> {}", std::any::type_name::<T>());
-        }
-        let mut nodes = Vec::new();
-        while let Some(node) = stream
-            .scope(|stream| T::parse(stream))
-        {
-            let sep = stream.scope(|stream| S::parse(stream));
-            if matches!(sep, None) { break; }
-            nodes.push(node);
-        }
-        let res = Some(Intersperse { nodes, phantom_data: PhantomData });
-        #[cfg(feature = "leben_parsable_debug")] {
-            println!("DEBUG INTER <<<<< {}\n{:?}", std::any::type_name::<T>(), &res);
-        }
-        res
-    }
-}
-
-impl<T, S> Debug for Intersperse<T, S>
-where
-    T: for<'t> Parsable<'t> + Debug,
-    S: for<'s> Parsable<'s>,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Intersperse").field("nodes", &self.nodes).finish()
-    }
-}
-
-#[derive(Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Ignore<T>
-where T: 
-    for<'a> Parsable<'a> 
-{
-    #[serde(skip_serializing)]
-    phantom_data: PhantomData<T>,
-}
-
-impl<T> Debug for Ignore<T>
-where T: 
-    for<'a> Parsable<'a> 
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Ignore").finish()
-    }
-}
-
-impl<'a, T> Parsable<'a> for Ignore<T>
-where T:
-    for<'b> Parsable<'b>
-{
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        stream
-            .scope(|stream| T::parse(stream))
-            .map(|_| Ignore { phantom_data: PhantomData })
-    }
-}
-
-pub type Span<T> = WithSpan<Ignore<T>>;
-
-impl<'a, T> Parsable<'a> for Box<T>
-where
-    T: for<'b> Parsable<'b>
-{
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        stream
-            .scope(|stream| T::parse(stream))
-            .map(|node| Box::new(node))
-    }
-}
-
-impl<'a, T> Parsable<'a> for Option<T>
-where 
-    T: for<'b> Parsable<'b>
-{
-    fn parse(stream: &mut ScopedStream<'a>) -> Option<Self> {
-        Some(stream
-            .scope(|stream| T::parse(stream)))
-    }
-}
-
-impl<'a> Parsable<'a> for () {
-    fn parse(_: &mut ScopedStream<'a>) -> Option<Self> {
-        Some(())
-    }
-}
-
-pub fn parse_literal<'a>(stream: &mut ScopedStream<'a>, literal: &'static [u8]) -> Option<()> {
-    let res = stream.scope(|stream| {
-        stream.read(literal.len(), |slice| slice == literal)
-            .map(|_| ())
-    });
-    #[cfg(feature = "leben_parsable_debug")] {
-        let lit = String::from_utf8_lossy(literal);
-        println!("DEBUG LITERAL     {} {:?}", &lit, res.as_ref().map(|_| &lit));
-    }
-    res
 }
 
 #[macro_export]
-macro_rules! Literal {
-    { $( $vis:vis struct $name:ident = $lit:literal; )* } => {
-        $(
-            #[derive(Parsable, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
-            $vis struct $name {
-                #[literal = $lit] _0: (),
-            }
+macro_rules! ok_or_throw {
+    ($x:expr) => {
+        match $x {
+            Ok(ok) => ok,
+            Err(err) => return Some(Err(err)),
+        }
+    }
+}
 
-            impl std::fmt::Debug for $name {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                    f.debug_tuple(stringify!($name)).field(&stringify!($lit)).finish()
-                }
-            }
-        )*
+pub fn format_error_stack(buffer: &[u8], stack: ParseErrorStack) -> String {
+    let mut line_offsets = vec![0];
+    let mut previous_line_offset = 0;
+    let mut max_line_width = 0;
+    let mut stream = ScopedStream::new(buffer);
+    while !stream.at_end() {
+        if matches!(stream.read(2, |chars| chars == b"\r\n"), Some(_)) ||
+            matches!(stream.read(1, |chars| chars == b"\n"), Some(_)) ||
+            matches!(stream.read(1, |chars| chars == b"\r"), Some(_))
+        {
+            let offset = stream.index();
+            max_line_width = max_line_width.max(offset - previous_line_offset - 1);
+            line_offsets.push(offset);
+            previous_line_offset = offset;
+        } else {
+            stream.read(1, |_| true);
+        }
     }
 
+    let line_text_width = line_offsets.len().to_string().len();
+    let column_text_width = max_line_width.to_string().len();
+
+    let mut out = String::new();
+    for ParseErrorContext { error, source_position } in stack.iter().rev() {
+        let mut current_line = 0;
+        let mut current_line_offset = 0;
+        for (line, line_offset) in (0usize..).into_iter().zip(&line_offsets) {
+            if line_offset > source_position {
+                break;
+            }
+            current_line = line;
+            current_line_offset = *line_offset;
+        }
+
+        out.push_str(&format!("\nat {:>line_text_width$}:{:>column_text_width$}: Expected {}", 
+            current_line, source_position - current_line_offset, error));
+    }
+    out
 }

@@ -1,8 +1,10 @@
 pub mod stream;
 pub mod parser;
+pub mod parsable_types;
 
 pub use stream::*;
 pub use parser::*;
+pub use parsable_types::*;
 pub use leben_parsable_derive::Parsable;
 
 #[cfg(test)]
@@ -22,6 +24,10 @@ mod parse_tests {
                     .or(<CharLiteral<b'1'> as Parsable>::parse(stream).map(|v| Variants::V1(v)))
                     .or(<CharLiteral<b'2'> as Parsable>::parse(stream).map(|v| Variants::V2(v)))
             })
+        }
+        
+        fn error() -> crate::ParseError {
+            String::from("Variants")
         }
     }
 
@@ -43,6 +49,10 @@ mod parse_tests {
                     b: <B as Parsable<'_>>::parse(stream)?,
                 })
             })
+        }
+        
+        fn error() -> crate::ParseError {
+            String::from("Compound")
         }
     }
 

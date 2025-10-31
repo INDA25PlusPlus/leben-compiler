@@ -24,25 +24,29 @@ pub fn parsable_derive(input: TokenStream) -> TokenStream {
     }
 }
 
-fn parse_item(ty: &syn::Type) -> TokenStream2 {
-    fn derive_tokens(tokens: TokenStream2) -> TokenStream2 {
-        quote! {
-            <#tokens as leben_parsable::Parsable>::parse(stream)?
-        }
-    }
+fn call_parse(tokens: TokenStream2, first_member: &mut bool) -> TokenStream2 {
+    let inner = if *first_member {
+        *first_member = false;
+        quote! { <#tokens as leben_parsable::Parsable>::parse(stream)? }
+    } else {
+        quote! { <#tokens as leben_parsable::Parsable>::parse_or_error(stream) }
+    };
+    quote! { leben_parsable::ok_or_throw!( #inner ) }
+}
 
+fn member_derive(ty: &syn::Type, first_member: &mut bool) -> TokenStream2 {
     match ty {
         #![cfg_attr(test, deny(non_exhaustive_omitted_patterns))]
         
         syn::Type::Macro(type_macro) => {
-            derive_tokens(quote! { #type_macro }.into())},
+            call_parse(quote! { #type_macro }.into(), first_member)},
         syn::Type::Paren(type_paren) => {
-            parse_item(&type_paren.elem)},
+            member_derive(&type_paren.elem, first_member)},
         syn::Type::Path(type_path) => {
-            derive_tokens(quote! { #type_path })},
+            call_parse(quote! { #type_path }, first_member)},
         syn::Type::Tuple(type_tuple) => {
             let parses = type_tuple.elems.iter()
-                .map(|ty| parse_item(ty));
+                .map(|ty| member_derive(ty, first_member));
             quote! { ( #( #parses ),* ) }
         },
         syn::Type::Array(type_array) => quote! { 
@@ -75,8 +79,8 @@ fn parse_item(ty: &syn::Type) -> TokenStream2 {
 fn impl_block(type_ident: &syn::Ident, inner_parse: TokenStream2) -> TokenStream2 {
     let type_name = &type_ident.to_string();
     quote! {
-        impl<'a> leben_parsable::Parsable<'a> for #type_ident {
-            fn parse(stream: &mut leben_parsable::ScopedStream<'a>) -> std::option::Option<Self> {
+        impl<'__leben_parsable_derive> leben_parsable::Parsable<'__leben_parsable_derive> for #type_ident {
+            fn parse(stream: &mut leben_parsable::ScopedStream<'__leben_parsable_derive>) -> leben_parsable::ParseOutcome<Self> {
                 #![allow(unexpected_cfgs)]
                 #[cfg(leben_parsable_derive_debug)] {
                     println!("DEBUG >>>>>>>>>>> {}", #type_name);
@@ -89,71 +93,78 @@ fn impl_block(type_ident: &syn::Ident, inner_parse: TokenStream2) -> TokenStream
                 }
                 res
             }
+
+            fn error() -> leben_parsable::ParseError {
+                String::from(#type_name)
+            }
         }
     }
+}
+
+fn field_derive(field: &syn::Field, first_member: &mut bool) -> TokenStream2 {
+    let ty = &field.ty;
+    let is_unit_type = is_unit_type(ty);
+
+    let name = &field.ident;
+    let prefix = match name {
+        Some(name) => quote! { #name: },
+        None => quote! {}
+    };
+
+    if let Some(literal) = get_literal_attribute(&field.attrs) {
+        if is_unit_type {
+            let literal_parse = if *first_member {
+                *first_member = false;
+                quote! { leben_parsable::parse_literal(stream, #literal)? }
+            } else {
+                quote! { leben_parsable::parse_literal_or_error(stream, #literal) }
+            };
+            quote! { #prefix leben_parsable::ok_or_throw!( #literal_parse ) }
+        } else {
+            quote! { #prefix compile_error!("Unexpected `literal` attribute") }
+        }
+    } else {
+        if is_unit_type {
+            quote! { #prefix compile_error!("Expected `literal` attribute")  }
+        } else {
+            let member = member_derive(ty, first_member);
+            quote! { #prefix #member }
+        }
+    }
+}
+
+fn named_fields_derive(fields: &syn::FieldsNamed) -> Vec<TokenStream2> {
+    let mut first_member = true;
+    fields.named.iter().map(|field| field_derive(field, &mut first_member)).collect()
+}
+
+fn unnamed_fields_derive(fields: &syn::FieldsUnnamed) -> Vec<TokenStream2> {
+    let mut first_member = true;
+    fields.unnamed.iter().map(|field| field_derive(field, &mut first_member)).collect()
 }
 
 fn struct_derive(type_ident: syn::Ident, data_struct: syn::DataStruct) -> TokenStream2 {
     match data_struct.fields {
         syn::Fields::Named(fields) => {
-            let fields: Vec<_> = fields.named.iter().map(|field| {
-                let name = &field.ident;
-                let ty = &field.ty;
-                let is_unit_type = is_unit_type(ty);
-
-                if let Some(literal) = get_literal_attribute(&field.attrs) {
-                    if is_unit_type {
-                        quote! { #name: leben_parsable::parse_literal(stream, #literal)? }
-                    } else {
-                        quote! { #name: compile_error!("Unexpected `literal` attribute") }
-                    }
-                } else {
-                    if is_unit_type {
-                        quote! { #name: compile_error!("Expected `literal` attribute")  }
-                    } else {
-                        let member = parse_item(ty);
-                        quote! { #name: #member }
-                    }
-                }
-            }).collect();
-
+            let fields = named_fields_derive(&fields);
             impl_block(
                 &type_ident,
                 quote! {
-                    std::option::Option::Some(Self {
+                    std::option::Option::Some(std::result::Result::Ok(Self {
                         #( #fields ),*
-                    })
+                    }))
                 }
             ).into()
         },
         
         syn::Fields::Unnamed(fields) => {
-            let fields: Vec<_> = fields.unnamed.iter().map(|field| {
-                let ty = &field.ty;
-                let is_unit_type = is_unit_type(ty);
-
-                if let Some(literal) = get_literal_attribute(&field.attrs) {
-                    if is_unit_type {
-                        quote! { leben_parsable::parse_literal(stream, #literal)? }
-                    } else {
-                        quote! { compile_error!("Unexpected `literal` attribute") }
-                    }
-                } else {
-                    if is_unit_type {
-                        quote! { compile_error!("Expected `literal` attribute") }
-                    } else {
-                        let member = parse_item(ty);
-                        quote! { #member }
-                    }
-                }
-            }).collect();
-
+            let fields = unnamed_fields_derive(&fields);
             impl_block(
                 &type_ident,
                 quote! {
-                    std::option::Option::Some(Self (
+                    std::option::Option::Some(std::result::Result::Ok(Self (
                         #( #fields ),*
-                    ))
+                    )))
                 }
             ).into()
         },
@@ -169,58 +180,19 @@ fn enum_derive(enum_name: syn::Ident, data_enum: syn::DataEnum) -> TokenStream2 
         let variant_name = &variant.ident;
         match &variant.fields {
             syn::Fields::Named(fields) => {
-                let fields: Vec<_> = fields.named.iter().map(|field| {
-                    let name = &field.ident;
-                    let ty = &field.ty;
-                    let is_unit_type = is_unit_type(ty);
-
-                    if let Some(literal) = get_literal_attribute(&field.attrs) {
-                        if is_unit_type {
-                            quote! { #name: leben_parsable::parse_literal(stream, #literal)? }
-                        } else {
-                            quote! { #name: compile_error!("Unexpected `literal` attribute") }
-                        }
-                    } else {
-                        if is_unit_type {
-                            quote! { #name: compile_error!("Expected `literal` attribute")  }
-                        } else {
-                            let member = parse_item(ty);
-                            quote! { #name: #member }
-                        }
-                    }
-                }).collect();
-
+                let fields = named_fields_derive(fields);
                 quote! {
-                    std::option::Option::Some(Self::#variant_name {
+                    Self::#variant_name {
                         #( #fields ),*
-                    })
+                    }
                 }
             },
             syn::Fields::Unnamed(fields) => {
-                let fields: Vec<_> = fields.unnamed.iter().map(|field| {
-                    let ty = &field.ty;
-                    let is_unit_type = is_unit_type(ty);
-
-                    if let Some(literal) = get_literal_attribute(&field.attrs) {
-                        if is_unit_type {
-                            quote! { leben_parsable::parse_literal(stream, #literal)? }
-                        } else {
-                            quote! { compile_error!("Unexpected `literal` attribute") }
-                        }
-                    } else {
-                        if is_unit_type {
-                            quote! { compile_error!("Expected `literal` attribute") }
-                        } else {
-                            let member = parse_item(ty);
-                            quote! { #member }
-                        }
-                    }
-                }).collect();
-
+                let fields = unnamed_fields_derive(fields);
                 quote! {
-                    std::option::Option::Some(Self::#variant_name(
+                    Self::#variant_name(
                         #( #fields ),*
-                    ))
+                    )
                 }
             },
             syn::Fields::Unit => quote! { 
@@ -233,7 +205,7 @@ fn enum_derive(enum_name: syn::Ident, data_enum: syn::DataEnum) -> TokenStream2 
         &enum_name, 
         quote! {
             std::option::Option::None
-                #( .or_else(|| #variants) )*
+                #( .or_else(|| std::option::Option::Some(std::result::Result::Ok( #variants ))) )*
         }
     ).into()
 }
